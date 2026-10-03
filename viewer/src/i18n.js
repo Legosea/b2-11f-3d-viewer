@@ -28,6 +28,7 @@ export const i18n = {
   toolFullscreen: '⛶ Fullscreen',
   toolReset: '↺ Whole home',
   toolLabels: '🏷 Labels',
+  toolReviewOverlay: '平面疊圖',
 
   roomFocus: 'Focus room',
   wholeHome: 'Whole home',
