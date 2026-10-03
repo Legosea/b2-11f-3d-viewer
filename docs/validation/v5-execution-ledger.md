@@ -21,3 +21,5 @@ Plan: docs/superpowers/plans/2026-10-03-b2-11f-v5-implementation.md
 - Final pre-merge QA checkpoint after adding the Pages publish workflow.
 
 - 最終合併前：已將 browser smoke 改為最多重試 3 次，以處理 GitHub runner / headless Chromium 偶發的時間序抖動；本提交觸發完整 QA。
+
+- Full QA rerun after making interaction smoke use the low render tier for post-screenshot interaction checks on SwiftShader.
