@@ -49,3 +49,13 @@ test('review overlay sits above the finished floor and uses the exact shell boun
   assert.ok(Math.abs(vw-(maxX-minX))<0.001,{vw,width:maxX-minX});
   assert.ok(Math.abs(vd-(maxZ-minZ))<0.001,{vd,depth:maxZ-minZ});
 });
+
+test('review overlay is sourced from PDF vector evidence rather than regenerated wall lines',()=>{
+  const evidence=json('../../case/evidence/plan-vector.json');
+  assert.equal(evidence.sourceKind,'pdf-vector');
+  assert.ok(Array.isArray(evidence.structuralBands));
+  assert.ok(evidence.structuralBands.length>=32);
+  const svg=read('../../case/output/plan-overlay.svg');
+  assert.match(svg,/data-source="pdf-vector"/);
+  assert.ok((svg.match(/class="source-structure"/g)||[]).length>=32);
+});
