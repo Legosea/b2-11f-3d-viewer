@@ -28,3 +28,10 @@ test('W3 elevation grid follows the supplied 79-110-79 / 80-110 drawing',()=>{
  assert.ok(Math.abs(op.grid.columns.reduce((a,b)=>a+b,0)-2.68)<1e-9);
  assert.ok(Math.abs(op.grid.rows.reduce((a,b)=>a+b,0)-1.90)<1e-9);
 });
+
+test('shell renders W3 grid mullions from plan data',()=>{
+ const shell=fs.readFileSync(new URL('../src/shell.js',import.meta.url),'utf8');
+ assert.match(shell,/opening\.grid\?\.columns/);
+ assert.match(shell,/grid-v/);
+ assert.match(shell,/grid-h/);
+});
