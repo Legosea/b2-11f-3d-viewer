@@ -21,3 +21,10 @@ test('W3 is a 2680 x 1900 opening with 500 sill embedded in its wall',()=>{
  const wallLen=dist(wall.a,wall.b);
  assert.ok(dist(wall.a,op.a)<=wallLen && dist(wall.a,op.b)<=wallLen,'opening span is inside wall');
 });
+test('W3 elevation grid follows the supplied 79-110-79 / 80-110 drawing',()=>{
+ const op=plan.openings.find(x=>x.id==='op-w3-living');
+ assert.deepEqual(op.grid?.columns,[0.79,1.10,0.79]);
+ assert.deepEqual(op.grid?.rows,[0.80,1.10]);
+ assert.ok(Math.abs(op.grid.columns.reduce((a,b)=>a+b,0)-2.68)<1e-9);
+ assert.ok(Math.abs(op.grid.rows.reduce((a,b)=>a+b,0)-1.90)<1e-9);
+});
