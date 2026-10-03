@@ -34,6 +34,12 @@ test('review overlay sits above the finished floor and uses the exact shell boun
       eat(x-half,z-half); eat(x+half,z+half);
     }
   }
+  for(const fixed of plan.fixedElements||[]){
+    const b=fixed.bounds||{};
+    if(!(b.width>0&&b.depth>0))continue;
+    eat(b.x-b.width/2,b.z-b.depth/2);
+    eat(b.x+b.width/2,b.z+b.depth/2);
+  }
   const svg=read('../../case/output/plan-overlay.svg');
   const match=svg.match(/viewBox="([^"]+)"/);
   assert.ok(match,'overlay SVG has a viewBox');
