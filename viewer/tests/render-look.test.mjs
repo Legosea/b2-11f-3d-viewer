@@ -32,3 +32,14 @@ test('dollhouse materials stay light and room labels start hidden',()=>{
   assert.ok(parseInt(palette.floor.slice(1,3),16)>=0xD0,palette.floor);
   assert.ok(parseInt(palette.wood.slice(1,3),16)>=0xA8,palette.wood);
 });
+
+test('axon hero uses northwest directional dollhouse cutaway',()=>{
+  const views=read('../src/views.js');
+  const shell=read('../src/shell.js');
+  assert.match(views,/new T\.Vector3\(-distance \* 0\.68, distance \* 0\.62, -distance \* 0\.68\)/);
+  assert.match(shell,/nearCutWallIds/);
+  assert.match(shell,/bounds\.minX/);
+  assert.match(shell,/bounds\.minZ/);
+  assert.match(shell,/const CUT_HEIGHT = 0\.95/);
+  assert.match(shell,/part\.visible = full \|\| !nearCutWallIds\.has\(part\.userData\.wall\)/);
+});
