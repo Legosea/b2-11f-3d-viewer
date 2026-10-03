@@ -85,6 +85,7 @@ export function createMaterials(renderer) {
     leather: phys('#63483a', 0.52, {clearcoat: 0.3, clearcoatRoughness: 0.45}),
     // Hard goods
     metal: std('#6d726f', 0.22, {metalness: 0.92}),
+    frame: std('#46484b', 0.38, {metalness: 0.55}),
     chrome: std('#c9ccca', 0.16, {metalness: 1}),
     dark: std('#242c29', 0.4),
     white: std('#f2eee3', 0.8),
@@ -123,6 +124,7 @@ export function applyPalette(m, palette = []) {
   set(m.fabric, pick('fabric')); set(m.linen, pick('fabric'));
   set(m.floor, pick('floor')); set(m.stone, pick('floor'));
   set(m.accentFabric, pick('accent'));
+  set(m.frame, pick('frame'));
   return palette;
 }
 
