@@ -550,7 +550,23 @@
       "swing": null,
       "inferred": false,
       "wall": "w-ext-living-south",
-      "name": "W3 客廳窗 2680x1900"
+      "name": "W3 客廳窗 2680x1900",
+      "grid": {
+        "columns": [
+          0.79,
+          1.1,
+          0.79
+        ],
+        "rows": [
+          0.8,
+          1.1
+        ],
+        "upperOperable": [
+          "left",
+          "right"
+        ],
+        "source": "user-supplied W3 elevation drawing"
+      }
     },
     {
       "id": "op-door-balcony",
