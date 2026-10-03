@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interior-design-master.local/schemas/case-state.schema.json",
+  "title": "Interior Design Master case state",
+  "type": "object",
+  "required": ["version", "caseId", "stage", "inputs", "planVersion", "styleVersion", "productVersion", "assumptions", "unknowns"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "caseId": {"type": "string", "minLength": 1},
+    "stage": {"enum": ["intake", "concept", "white-model", "style", "products", "viewer", "verified", "blocked"]},
+    "inputs": {"type": "array", "items": {"type": "object", "required": ["path", "sha256", "role"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string"}, "role": {"type": "string"}}}},
+    "planVersion": {"type": ["string", "null"]},
+    "styleVersion": {"type": ["string", "null"]},
+    "conceptVersion": {"type": ["string", "null"]},
+    "productVersion": {"type": ["string", "null"]},
+    "conceptRenderIds": {"type": "array", "items": {"type": "string"}},
+    "userConfirmation": {"type": ["object", "null"]},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "unknowns": {"type": "array", "items": {"type": "string"}},
+    "lastReceipt": {"type": ["string", "null"]}
+  }
+}

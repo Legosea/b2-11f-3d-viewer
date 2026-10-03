@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interior-design-master.local/schemas/concept-render.schema.json",
+  "title": "Interior Design Master concept render records",
+  "type": "object",
+  "required": ["version", "renders"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "renders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "sourceInputs", "prompt", "status", "outputPath"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "roomIds": {"type": "array", "items": {"type": "string"}},
+          "styleId": {"type": ["string", "null"]},
+          "sourceInputs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "prompt": {"type": "string", "minLength": 1},
+          "avoid": {"type": "array", "items": {"type": "string"}},
+          "provider": {"type": ["string", "null"]},
+          "model": {"type": ["string", "null"]},
+          "generatedAt": {"type": ["string", "null"], "format": "date-time"},
+          "outputPath": {"type": ["string", "null"]},
+          "status": {"enum": ["candidate", "selected", "rejected", "blocked"]},
+          "cameraHint": {"type": ["string", "null"]},
+          "constraintNotes": {"type": "array", "items": {"type": "string"}},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

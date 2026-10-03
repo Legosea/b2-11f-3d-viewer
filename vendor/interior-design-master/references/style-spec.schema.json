@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interior-design-master.local/schemas/style-spec.schema.json",
+  "title": "Interior Design Master style specification",
+  "type": "object",
+  "required": ["version", "styles"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "styles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "summary", "palette", "materials", "lighting", "rules"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "summary": {"type": "string"},
+          "references": {"type": "array", "items": {"type": "string"}},
+          "palette": {"type": "array", "items": {"type": "object", "required": ["name", "hex", "role"], "properties": {"name": {"type": "string"}, "hex": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "role": {"type": "string"}}}},
+          "materials": {"type": "array", "items": {"type": "object", "required": ["surface", "description"], "properties": {"surface": {"type": "string"}, "description": {"type": "string"}, "status": {"enum": ["confirmed", "inferred", "unknown"]}}}},
+          "lighting": {"type": "object", "required": ["description"], "properties": {"description": {"type": "string"}, "azimuthDeg": {"type": ["number", "null"]}, "elevationDeg": {"type": ["number", "null"]}, "status": {"enum": ["confirmed", "inferred", "unknown"]}}},
+          "rules": {"type": "array", "items": {"type": "string"}},
+          "furnitureRoles": {"type": "array", "items": {"type": "object", "required": ["id", "role", "room", "required"], "properties": {"id": {"type": "string"}, "role": {"type": "string"}, "room": {"type": "string"}, "required": {"type": "boolean"}, "maxWidth": {"type": ["number", "null"]}, "maxDepth": {"type": ["number", "null"]}, "clearance": {"type": ["number", "null"]}}}}
+        }
+      }
+    }
+  }
+}

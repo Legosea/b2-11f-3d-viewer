@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interior-design-master.local/schemas/furniture-product.schema.json",
+  "title": "Interior Design Master furniture product record",
+  "type": "object",
+  "required": ["id", "role", "name", "market", "research", "dimensionsMm", "dimensionSourceUrl", "evidence", "purchaseUrl", "geometry", "fit"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "role": {"type": "string", "minLength": 1},
+    "brand": {"type": "string"},
+    "model": {"type": "string"},
+    "variant": {"type": "string"},
+    "name": {"type": "string", "minLength": 1},
+    "market": {"type": "string", "minLength": 1},
+    "research": {"type": "object", "required": ["queries", "selectedReason"], "properties": {"queries": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "candidateUrls": {"type": "array", "items": {"type": "string", "format": "uri"}}, "selectedReason": {"type": "string", "minLength": 1}, "rejected": {"type": "array", "items": {"type": "object"}}}},
+    "dimensionsMm": {
+      "type": "object",
+      "required": ["width", "depth", "height", "widthStatus", "depthStatus", "heightStatus"],
+      "properties": {
+        "width": {"type": "number", "exclusiveMinimum": 0},
+        "depth": {"type": "number", "exclusiveMinimum": 0},
+        "height": {"type": "number", "exclusiveMinimum": 0},
+        "widthStatus": {"enum": ["confirmed", "estimated", "unknown"]},
+        "depthStatus": {"enum": ["confirmed", "estimated", "unknown"]},
+        "heightStatus": {"enum": ["confirmed", "estimated", "unknown"]}
+      }
+    },
+    "dimensionSourceUrl": {"type": "string", "format": "uri"},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sourceUrl", "sourceType", "retrievedAt"],
+        "properties": {
+          "sourceUrl": {"type": "string", "format": "uri"},
+          "sourceType": {"enum": ["official", "specification", "authorized-retailer", "retailer", "marketplace", "user-provided", "inspiration"]},
+          "retrievedAt": {"type": "string", "format": "date-time"},
+          "dimensionQuote": {"type": "string"},
+          "notes": {"type": "string"}
+        }
+      }
+    },
+    "purchaseUrl": {"type": ["string", "null"], "format": "uri"},
+    "price": {"type": ["object", "null"], "properties": {"amount": {"type": "number", "minimum": 0}, "currency": {"type": "string"}, "asOf": {"type": "string", "format": "date-time"}}},
+    "geometry": {"type": "object", "required": ["source", "scaleStatus"], "properties": {"source": {"enum": ["provided-model", "licensed-asset", "procedural-proxy", "conceptual-proxy"]}, "assetPath": {"type": ["string", "null"]}, "scaleStatus": {"enum": ["confirmed", "estimated", "unknown"]}, "pivotStatus": {"enum": ["normalized", "unknown"]}}},
+    "fit": {"type": "object", "required": ["status", "reasons", "unknowns"], "properties": {"status": {"enum": ["pass", "warn", "fail", "unknown"]}, "reasons": {"type": "array", "items": {"type": "string"}}, "unknowns": {"type": "array", "items": {"type": "string"}}}},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

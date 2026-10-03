@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interior-design-master.local/schemas/plan-spec.schema.json",
+  "title": "Interior Design Master plan specification",
+  "type": "object",
+  "required": ["version", "units", "source", "rooms", "walls", "openings", "fixedElements", "assumptions"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "units": {"const": "m"},
+    "source": {
+      "type": "object",
+      "required": ["files", "coordinateSystem", "scaleStatus"],
+      "properties": {
+        "files": {"type": "array", "items": {"type": "string"}},
+        "coordinateSystem": {"type": "string"},
+        "scaleStatus": {"enum": ["confirmed", "estimated", "unknown"]},
+        "metresPerPixel": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "northDeg": {"type": ["number", "null"]}
+      }
+    },
+    "levels": {"type": "array", "items": {"type": "object"}},
+    "rooms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "boundary", "connects"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "boundary": {"type": "array", "minItems": 3, "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+          "connects": {"type": "array", "items": {"type": "string"}},
+          "kind": {"type": "string"},
+          "status": {"enum": ["confirmed", "estimated", "inferred", "unknown"]}
+        }
+      }
+    },
+    "walls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "a", "b", "thickness", "height"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "a": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+          "b": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+          "thickness": {"type": "number", "exclusiveMinimum": 0},
+          "height": {"type": "number", "exclusiveMinimum": 0},
+          "kind": {"enum": ["solid", "parapet", "partition", "unknown"]},
+          "status": {"enum": ["confirmed", "estimated", "inferred", "unknown"]}
+        }
+      }
+    },
+    "openings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "a", "b", "sill", "head"],
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"enum": ["door", "sliding", "window", "opening"]},
+          "a": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+          "b": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+          "sill": {"type": "number", "minimum": 0},
+          "head": {"type": "number", "exclusiveMinimum": 0},
+          "swing": {"type": ["number", "null"]},
+          "inferred": {"type": "boolean"}
+        }
+      }
+    },
+    "fixedElements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "room", "bounds"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string"},
+          "room": {"type": "string"},
+          "bounds": {
+            "type": "object",
+            "required": ["x", "z", "width", "depth", "height"],
+            "properties": {
+              "x": {"type": "number"},
+              "z": {"type": "number"},
+              "width": {"type": "number", "exclusiveMinimum": 0},
+              "depth": {"type": "number", "exclusiveMinimum": 0},
+              "height": {"type": "number", "exclusiveMinimum": 0}
+            }
+          },
+          "status": {"enum": ["confirmed", "estimated", "inferred", "unknown"]}
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "points"],
+        "properties": {
+          "id": {"type": "string"},
+          "points": {"type": "array", "minItems": 2, "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+          "width": {"type": "number", "exclusiveMinimum": 0},
+          "status": {"enum": ["confirmed", "estimated", "inferred", "unknown"]}
+        }
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "statement": {"type": "string"},
+          "status": {"enum": ["confirmed", "estimated", "inferred", "unknown"]},
+          "basis": {"type": "string"}
+        }
+      }
+    }
+  }
+}
