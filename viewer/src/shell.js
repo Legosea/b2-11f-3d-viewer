@@ -62,6 +62,13 @@ export function planBounds(plan) {
     for (const [x, z] of [wall.a, wall.b]) { eat(x - half, z - half); eat(x + half, z + half); }
     box.height = Math.max(box.height, wall.height || 0);
   }
+  for (const fixed of plan.fixedElements || []) {
+    const b = fixed.bounds || {};
+    if (!(b.width > 0 && b.depth > 0)) continue;
+    eat(b.x - b.width / 2, b.z - b.depth / 2);
+    eat(b.x + b.width / 2, b.z + b.depth / 2);
+    box.height = Math.max(box.height, b.height || 0);
+  }
   if (!Number.isFinite(box.minX)) Object.assign(box, {minX: -1, maxX: 1, minZ: -1, maxZ: 1});
   if (!box.height) box.height = 2.7;
   box.width = box.maxX - box.minX;
