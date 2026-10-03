@@ -46,4 +46,13 @@ if (!fs.existsSync(path.join(target, 'concept-renders.json'))) {
   copied.push({file: 'concept-renders.json', bytes: 0, note: 'created empty (absent in source case)'});
 }
 
+const overlayFrom = path.join(source, 'output', 'plan-overlay.svg');
+if (fs.existsSync(overlayFrom)) {
+  const overlayTarget = path.join(target, 'output');
+  fs.mkdirSync(overlayTarget, {recursive: true});
+  const raw = fs.readFileSync(overlayFrom);
+  fs.writeFileSync(path.join(overlayTarget, 'plan-overlay.svg'), raw);
+  copied.push({file: 'output/plan-overlay.svg', bytes: raw.length});
+}
+
 console.log(JSON.stringify({ok: true, source, target, copied}, null, 2));
