@@ -1,4 +1,7 @@
 import * as T from 'three';
+import {FLOOR_SURFACE_Y} from './shell.js';
+
+const REVIEW_OFFSET = 0.012;
 
 /**
  * Source-plan review layer. It never mutates architecture: the SVG is placed as a transparent
@@ -32,7 +35,7 @@ export function createReviewOverlay({parent, bounds, url, invalidate}) {
       const plane = new T.Mesh(new T.PlaneGeometry(bounds.width, bounds.depth), material);
       plane.name = 'review-plan-overlay';
       plane.rotation.x = -Math.PI / 2;
-      plane.position.set(bounds.centerX, 0.018, bounds.centerZ);
+      plane.position.set(bounds.centerX, FLOOR_SURFACE_Y + REVIEW_OFFSET, bounds.centerZ);
       plane.renderOrder = 90;
       plane.userData.reviewOnly = true;
       plane.userData.walkIgnore = true;

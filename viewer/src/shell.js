@@ -13,6 +13,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 
 export const FLOOR_Y = 0;
 const SLAB = 0.14;
+export const FLOOR_SURFACE_Y = FLOOR_Y + SLAB;
 const EPS = 1e-6;
 
 const WET_KINDS = new Set(['bath', 'bathroom', 'wc', 'toilet', 'shower', 'wetroom']);
