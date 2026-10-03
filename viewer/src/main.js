@@ -10,7 +10,7 @@ import {
 } from './state.js';
 
 const $ = selector => document.querySelector(selector);
-const CASE_BASE = '/case';
+export const caseBaseUrl = base => `${String(base || '/').replace(/\\/?$/, '/') }case`;\nconst CASE_BASE = caseBaseUrl(import.meta.env.BASE_URL);
 
 // ---------- case loading ----------
 async function loadCase() {
