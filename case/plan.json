@@ -726,58 +726,6 @@
       }
     },
     {
-      "id": "fx-right-bedroom-wardrobe-west",
-      "kind": "wardrobe",
-      "room": "rm-right-bedroom",
-      "status": "inferred",
-      "bounds": {
-        "x": 8.08,
-        "z": 2.55,
-        "width": 0.55,
-        "depth": 2.25,
-        "height": 2.35
-      }
-    },
-    {
-      "id": "fx-right-bedroom-wardrobe-north",
-      "kind": "wardrobe",
-      "room": "rm-right-bedroom",
-      "status": "inferred",
-      "bounds": {
-        "x": 9.65,
-        "z": 0.39,
-        "width": 2.7,
-        "depth": 0.55,
-        "height": 2.35
-      }
-    },
-    {
-      "id": "fx-left-bedroom-storage",
-      "kind": "wardrobe",
-      "room": "rm-left-bedroom",
-      "status": "inferred",
-      "bounds": {
-        "x": 0.45,
-        "z": 3.55,
-        "width": 0.55,
-        "depth": 2.3,
-        "height": 2.35
-      }
-    },
-    {
-      "id": "fx-open-ref",
-      "kind": "appliance-fridge",
-      "room": "rm-open-living",
-      "status": "inferred",
-      "bounds": {
-        "x": 7.52,
-        "z": 1.75,
-        "width": 0.65,
-        "depth": 0.7,
-        "height": 1.83
-      }
-    },
-    {
       "id": "fx-column-left-lower",
       "kind": "column",
       "room": "rm-left-bedroom",
