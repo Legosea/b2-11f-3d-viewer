@@ -30,6 +30,7 @@ export function defaultQuality() {
  */
 export function createRenderer(container, {onFirstFrame, onProgress} = {}) {
   const scene = new T.Scene();
+  scene.background = new T.Color('#e7e3de');
   const renderer = new T.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -39,7 +40,7 @@ export function createRenderer(container, {onFirstFrame, onProgress} = {}) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 0.82;
   container.appendChild(renderer.domElement);
 
   const camera = new T.PerspectiveCamera(38, 1, 0.035, 500);
@@ -49,7 +50,7 @@ export function createRenderer(container, {onFirstFrame, onProgress} = {}) {
   const pmrem = new T.PMREMGenerator(renderer);
   const room = new RoomEnvironment();
   scene.environment = pmrem.fromScene(room, 0.04).texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.42;
   room.dispose();
   container.dataset.hdri = 'room-environment-fallback';
 
@@ -104,7 +105,7 @@ export function createRenderer(container, {onFirstFrame, onProgress} = {}) {
   ao.updateGtaoMaterial({radius: 0.34, distanceExponent: 1.2, thickness: 0.9, scale: 1.05, samples: 16});
   composer.addPass(ao);
   // Lamps and LED channels glow slightly. SMAA works in linear space, so it precedes OutputPass.
-  const bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.18, 0.3, 6);
+  const bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.10, 0.28, 6);
   composer.addPass(bloom);
   const smaa = new SMAAPass();
   composer.addPass(smaa);
