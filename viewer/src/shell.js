@@ -320,20 +320,57 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
       }
 
       if (opening.type === 'window' || opening.type === 'sliding') {
-        const panes = opening.type === 'sliding' ? 2 : 1;
-        for (let i = 0; i < panes; i++) {
-          const paneWidth = (w - jamb * 2) / panes;
-          const pane = new T.Mesh(new T.BoxGeometry(paneWidth - 0.02, h - jamb * 2, 0.012), m.glass);
-          pane.position.set(-w / 2 + jamb + paneWidth * (i + 0.5), cut.sill + h / 2, opening.type === 'sliding' ? (i ? 0.03 : -0.03) : 0);
-          pane.name = `glass-${opening.id}-${i}`;
-          pane.userData = {id: `${opening.id}-glass${i}`, layer: 'architecture', collision: false, role: 'glazing'};
+        const gridColumns = opening.grid?.columns;
+        const gridRows = opening.grid?.rows;
+        const validGrid = Array.isArray(gridColumns) && gridColumns.length > 1
+          && Array.isArray(gridRows) && gridRows.length > 1
+          && Math.abs(gridColumns.reduce((sum, value) => sum + value, 0) - w) < 0.02
+          && Math.abs(gridRows.reduce((sum, value) => sum + value, 0) - h) < 0.02;
+
+        if (validGrid) {
+          const pane = new T.Mesh(new T.BoxGeometry(w - jamb * 2, h - jamb * 2, 0.012), m.glass);
+          pane.position.set(0, cut.sill + h / 2, 0);
+          pane.name = `glass-${opening.id}-grid`;
+          pane.userData = {id: `${opening.id}-glass-grid`, layer: 'architecture', collision: false, role: 'glazing'};
           pane.castShadow = false;
           part.add(pane);
-          // A slim mullion keeps the glazing from reading as a floating rectangle.
-          const mullion = boxMesh(0.035, h - jamb * 2, frameDepth * 0.9, m.frame);
-          mullion.position.set(-w / 2 + jamb + paneWidth * i + 0.02, cut.sill + h / 2, 0);
-          mullion.userData = {id: `${opening.id}-mullion${i}`, layer: 'architecture', collision: false, role: 'frame'};
-          part.add(mullion);
+
+          let accX = 0;
+          for (let i = 0; i < gridColumns.length - 1; i++) {
+            accX += gridColumns[i];
+            const mullion = boxMesh(0.045, h - jamb * 2, frameDepth * 0.9, m.frame);
+            mullion.position.set(-w / 2 + accX, cut.sill + h / 2, 0.006);
+            mullion.name = `grid-v-${opening.id}-${i}`;
+            mullion.userData = {id: `${opening.id}-grid-v${i}`, layer: 'architecture', collision: false, role: 'frame'};
+            part.add(mullion);
+          }
+
+          let accY = 0;
+          for (let i = 0; i < gridRows.length - 1; i++) {
+            accY += gridRows[i];
+            const rail = boxMesh(w - jamb * 2, 0.045, frameDepth * 0.9, m.frame);
+            rail.position.set(0, cut.sill + accY, 0.006);
+            rail.name = `grid-h-${opening.id}-${i}`;
+            rail.userData = {id: `${opening.id}-grid-h${i}`, layer: 'architecture', collision: false, role: 'frame'};
+            part.add(rail);
+          }
+        } else {
+          const panes = opening.type === 'sliding' ? 2 : 1;
+          for (let i = 0; i < panes; i++) {
+            const paneWidth = (w - jamb * 2) / panes;
+            const pane = new T.Mesh(new T.BoxGeometry(paneWidth - 0.02, h - jamb * 2, 0.012), m.glass);
+            pane.position.set(-w / 2 + jamb + paneWidth * (i + 0.5), cut.sill + h / 2, opening.type === 'sliding' ? (i ? 0.03 : -0.03) : 0);
+            pane.name = `glass-${opening.id}-${i}`;
+            pane.userData = {id: `${opening.id}-glass${i}`, layer: 'architecture', collision: false, role: 'glazing'};
+            pane.castShadow = false;
+            part.add(pane);
+            if (i > 0 || panes > 1) {
+              const mullion = boxMesh(0.035, h - jamb * 2, frameDepth * 0.9, m.frame);
+              mullion.position.set(-w / 2 + jamb + paneWidth * i, cut.sill + h / 2, 0);
+              mullion.userData = {id: `${opening.id}-mullion${i}`, layer: 'architecture', collision: false, role: 'frame'};
+              part.add(mullion);
+            }
+          }
         }
       } else if (opening.type === 'door') {
         // Leaves are drawn open. A closed leaf would block the walkthrough routes the plan
