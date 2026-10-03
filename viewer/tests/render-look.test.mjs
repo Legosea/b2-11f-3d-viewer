@@ -18,3 +18,17 @@ test('v5 warm dollhouse render defaults avoid white-model overexposure',()=>{
   assert.match(shell,/woodFloor/);
   assert.match(app,/setView\('axon'\)/);
 });
+
+test('dollhouse materials stay light and room labels start hidden',()=>{
+  const materials=read('../src/materials.js');
+  const app=read('../src/app.js');
+  const main=read('../src/main.js');
+  const style=JSON.parse(read('../../case/style.json')).styles[0];
+  assert.match(materials,/kind === 'wood' \? '#e[0-9a-f]{5}'/i,'procedural wood uses a light neutral base');
+  assert.match(materials,/set\(m\.plank, pick\('floor'\)\)/,'floor palette tints the plank material');
+  assert.match(app,/let labelsVisible = false/);
+  assert.match(main,/id="labelToggle" aria-pressed="false"/);
+  const palette=Object.fromEntries(style.palette.map(p=>[p.role,p.hex.toUpperCase()]));
+  assert.ok(parseInt(palette.floor.slice(1,3),16)>=0xD0,palette.floor);
+  assert.ok(parseInt(palette.wood.slice(1,3),16)>=0xA8,palette.wood);
+});
