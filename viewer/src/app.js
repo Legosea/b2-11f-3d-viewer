@@ -9,6 +9,7 @@ import {createPlacement} from './placement.js';
 import {createWalk} from './walk.js';
 import {createMeasure} from './measure.js';
 import {createCapture} from './capture.js';
+import {createReviewOverlay} from './review-overlay.js';
 import {buildProxy, loadAssetProxy, normaliseRole} from './proxy.js';
 import {encodeState, decodeState, exportProducts as buildProductExport, exportText} from './state.js';
 
@@ -41,6 +42,13 @@ export function createViewer(container, caseData, options = {}) {
   const m = createMaterials(renderer);
   const shell = createShell(plan, m, labelRoot, id => options.onRoomSelect?.(id));
   root.add(shell.group);
+
+  const reviewOverlay = createReviewOverlay({
+    parent: root,
+    bounds: shell.bounds,
+    url: options.reviewOverlayUrl || null,
+    invalidate
+  });
 
   // A soft contact plane keeps the model from floating when seen from outside.
   const contact = new T.Mesh(
@@ -107,7 +115,7 @@ export function createViewer(container, caseData, options = {}) {
   });
 
   const measure = createMeasure({container, canvas, camera, root, invalidate});
-  const capture = createCapture({container, renderer, composer: stack.composer, ao: stack.ao, quality: () => stack.quality});
+  const rawCapture = createCapture({container, renderer, composer: stack.composer, ao: stack.ao, quality: () => stack.quality});
 
   // ---------- view state ----------
   let view = 'orbit';
@@ -333,6 +341,9 @@ export function createViewer(container, caseData, options = {}) {
 
     setLabelsVisible(visible) { labelsVisible = !!visible; invalidate(); return labelsVisible; },
 
+    setReviewOverlay: visible => reviewOverlay.setVisible(visible),
+    getReviewOverlay: () => reviewOverlay.getVisible(),
+
     setStyle,
     getStyle: () => styles.find(entry => entry.id === activeStyleId) || null,
 
@@ -343,7 +354,12 @@ export function createViewer(container, caseData, options = {}) {
     getQuality: () => stack.quality,
 
     setMeasure(on) { const result = measure.set(on); invalidate(); return result; },
-    capture,
+    capture(scale = 2) {
+      const wasVisible = reviewOverlay.getVisible();
+      if (wasVisible) reviewOverlay.setVisible(false);
+      try { return rawCapture(scale); }
+      finally { if (wasVisible) reviewOverlay.setVisible(true); }
+    },
 
     walkAnalog: (x, y) => walk.setAnalog(x, y),
     walkRun: on => walk.setRun(on),
@@ -377,6 +393,7 @@ export function createViewer(container, caseData, options = {}) {
         light: lighting.getState(),
         walk: walk.getState(),
         measure: measure.getState(),
+        reviewOverlay: reviewOverlay.getVisible(),
         render: {
           hdri: container.dataset.hdri,
           surfaces: Number(container.dataset.surfaces || 0),
