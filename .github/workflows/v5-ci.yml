@@ -15,9 +15,19 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: viewer/package-lock.json
-      - run: npm ci
+      - name: Skill self-tests
+        run: node vendor/interior-design-master/scripts/test-scripts.mjs
+      - name: Validate case
+        run: node vendor/interior-design-master/scripts/validate-case.mjs case --strict
+      - name: Install viewer
+        run: npm ci
         working-directory: viewer
-      - run: node --test tests/*.test.mjs
+      - name: Link case
+        run: npm run link-case -- ../case
         working-directory: viewer
-      - run: npm run build
+      - name: Data regression tests
+        run: node --test tests/*.test.mjs
+        working-directory: viewer
+      - name: Build viewer
+        run: npm run build
         working-directory: viewer
