@@ -57,10 +57,10 @@ export function createViews({camera, controls, shell, invalidate}) {
       return {position: target.clone().add(new T.Vector3(0.001, reach * 1.55 + 3, 0.001)), target, fov: 32, rotate: false};
     }
     if (view === 'axon') {
-      const distance = reach * 1.5 + 6;
+      const distance = reach * 1.35 + 5.5;
       return {
-        position: target.clone().add(new T.Vector3(-distance * 0.62, distance * 0.72, distance * 0.62)),
-        target, fov: 26, rotate: true
+        position: target.clone().add(new T.Vector3(-distance * 0.68, distance * 0.62, distance * 0.68)),
+        target, fov: 24, rotate: true
       };
     }
     if (view === 'inside' || view === 'walk') {
