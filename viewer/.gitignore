@@ -1,0 +1,6 @@
+node_modules
+dist
+output
+public/hdri/*.hdr
+public/textures/*.jpg
+public/textures/*.png
