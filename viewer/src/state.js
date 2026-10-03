@@ -4,8 +4,8 @@
 // Every representation below (localStorage record, share hash, JSON export, text list) is keyed
 // on productId, and decode drops an entry that has lost it rather than inventing a replacement.
 
-const CURRENT_KEY = 'idm-current';
-const SAVED_KEY = 'idm-saved';
+const CURRENT_KEY = caseId => `idm-current:${caseId || 'unknown'}`;
+const SAVED_KEY = caseId => `idm-saved:${caseId || 'unknown'}`;
 export const MAX_SAVED = 6;
 
 const round = (value, factor) => Math.round((+value || 0) * factor) / factor;
@@ -59,7 +59,6 @@ export function decodeState(hash) {
     const layout = (Array.isArray(payload.i) ? payload.i : [])
       .map(([index, x, z, ry, y]) => {
         const productId = ids[index];
-        // An entry without a resolvable productId is dropped, never guessed.
         if (typeof productId !== 'string' || !productId) return null;
         return {productId, x: +x || 0, z: +z || 0, ry: +ry || 0, y: +y || 0};
       })
@@ -78,35 +77,53 @@ export function decodeState(hash) {
   }
 }
 
-export function loadCurrent() {
+export function loadCurrent(caseId) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(CURRENT_KEY) || 'null');
+    const parsed = JSON.parse(localStorage.getItem(CURRENT_KEY(caseId)) || 'null');
     return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
     return null;
   }
 }
 
-export function saveCurrent(record) {
-  try { localStorage.setItem(CURRENT_KEY, JSON.stringify(record)); return true; }
+export function saveCurrent(caseId, record) {
+  try { localStorage.setItem(CURRENT_KEY(caseId), JSON.stringify(record)); return true; }
   catch { return false; }
 }
 
-export function loadSaved() {
+export function loadSaved(caseId) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(SAVED_KEY(caseId)) || '[]');
     return Array.isArray(parsed) ? parsed.slice(0, MAX_SAVED) : [];
   } catch {
     return [];
   }
 }
 
-export function pushSaved(record) {
-  const saved = loadSaved();
+export function pushSaved(caseId, record) {
+  const saved = loadSaved(caseId);
   saved.unshift({...JSON.parse(JSON.stringify(record)), savedAt: new Date().toISOString()});
   const trimmed = saved.slice(0, MAX_SAVED);
-  try { localStorage.setItem(SAVED_KEY, JSON.stringify(trimmed)); return trimmed; }
+  try { localStorage.setItem(SAVED_KEY(caseId), JSON.stringify(trimmed)); return trimmed; }
   catch { return saved; }
+}
+
+export function resolveInitialState({hash = '', caseId, caseState = {}} = {}) {
+  const shared = decodeState(hash);
+  if (shared) {
+    return {
+      style: shared.styleId,
+      quality: shared.quality,
+      view: shared.view,
+      focus: shared.focus,
+      layout: shared.layout || [],
+      light: shared.light
+    };
+  }
+  const current = loadCurrent(caseId);
+  if (current) return current;
+  if (Array.isArray(caseState?.layout)) return {layout: caseState.layout};
+  return {layout: []};
 }
 
 /**
