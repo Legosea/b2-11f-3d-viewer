@@ -59,7 +59,7 @@ export function createViews({camera, controls, shell, invalidate}) {
     if (view === 'axon') {
       const distance = reach * 1.35 + 5.5;
       return {
-        position: target.clone().add(new T.Vector3(-distance * 0.68, distance * 0.62, distance * 0.68)),
+        position: target.clone().add(new T.Vector3(-distance * 0.68, distance * 0.62, -distance * 0.68)),
         target, fov: 24, rotate: true
       };
     }
