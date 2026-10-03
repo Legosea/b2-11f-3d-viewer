@@ -84,7 +84,7 @@ $('#app').innerHTML = `
     <div class="scene-bottom">
       <div class="toolbar">
         <button type="button" class="tool" id="wallToggle" aria-pressed="false">${t('toolWalls')}</button>
-        <button type="button" class="tool" id="labelToggle" aria-pressed="true">${t('toolLabels')}</button>\n        <button type="button" class="tool" id="reviewOverlay" aria-pressed="false">${t('toolReviewOverlay')}</button>
+        <button type="button" class="tool" id="labelToggle" aria-pressed="false">${t('toolLabels')}</button>\n        <button type="button" class="tool" id="reviewOverlay" aria-pressed="false">${t('toolReviewOverlay')}</button>
         <button type="button" class="tool" id="photo">${t('toolPhoto')}</button>
         <button type="button" class="tool" id="measure" aria-pressed="false">${t('toolMeasure')}</button>
         <button type="button" class="tool" id="resetView">${t('toolReset')}</button>
