@@ -121,7 +121,7 @@ export function createViewer(container, caseData, options = {}) {
   let view = 'orbit';
   let focus = 'all';
   let wallMode = 'cut';
-  let labelsVisible = true;
+  let labelsVisible = false;
   let activeStyleId = styles[0]?.id || null;
 
   function isInside() { return view === 'inside' || view === 'walk'; }
