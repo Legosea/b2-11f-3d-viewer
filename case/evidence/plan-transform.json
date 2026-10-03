@@ -22,5 +22,19 @@
     "targetWidthM": 2.68,
     "differenceM": -0.0003,
     "status": "confirmed"
-  }
+  },
+  "scaleClaimSource": "visually confirmed title block and user-approved v5 specification",
+  "reviewSourceBounds": [
+    148.64,
+    119.48,
+    677.84,
+    428.84
+  ],
+  "reviewBoundsM": {
+    "minX": 0,
+    "minZ": 0,
+    "maxX": 11.201399,
+    "maxZ": 6.54812
+  },
+  "extractionStatus": "source-vector-registration"
 }

@@ -1,0 +1,524 @@
+{
+  "version": 1,
+  "sourceKind": "pdf-vector",
+  "sourceFile": "2024-07-14-Model(1).pdf",
+  "sourceSha256": "d878e93f6c78bbd3fd113eb03eaab01365e2232e17d59ab39371d03190226144",
+  "page": 1,
+  "pageRect": [
+    0,
+    0,
+    842,
+    595
+  ],
+  "cropSource": [
+    148.64,
+    119.48,
+    677.84,
+    428.84
+  ],
+  "extractedTextMarker": "B2-11F",
+  "extraction": {
+    "totalDrawingCount": 1366,
+    "selectedDrawingCount": 435,
+    "structuralDrawingCount": 32,
+    "method": "PyMuPDF page.get_drawings(); compact repository evidence retains the 32 source gray structural bands used for registration"
+  },
+  "structuralBands": [
+    {
+      "id": "pdf-band-01",
+      "sourceRect": [
+        370.04,
+        119.48,
+        677.84,
+        126.56
+      ],
+      "modelRect": {
+        "x": 4.6863,
+        "z": 0,
+        "width": 6.5151,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-02",
+      "sourceRect": [
+        148.64,
+        119.48,
+        318.08,
+        126.56
+      ],
+      "modelRect": {
+        "x": 0,
+        "z": 0,
+        "width": 3.58648,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-03",
+      "sourceRect": [
+        578.36,
+        329.72,
+        601.52,
+        336.8
+      ],
+      "modelRect": {
+        "x": 9.09574,
+        "z": 4.45008,
+        "width": 0.49022,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-04",
+      "sourceRect": [
+        482.48,
+        329.72,
+        524,
+        336.8
+      ],
+      "modelRect": {
+        "x": 7.06628,
+        "z": 4.45008,
+        "width": 0.87884,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-05",
+      "sourceRect": [
+        148.64,
+        126.56,
+        155.72,
+        360.44
+      ],
+      "modelRect": {
+        "x": 0,
+        "z": 0.14986,
+        "width": 0.14986,
+        "depth": 4.95046
+      }
+    },
+    {
+      "id": "pdf-band-06",
+      "sourceRect": [
+        432.8,
+        329.72,
+        439.88,
+        365.12
+      ],
+      "modelRect": {
+        "x": 6.01472,
+        "z": 4.45008,
+        "width": 0.14986,
+        "depth": 0.7493
+      }
+    },
+    {
+      "id": "pdf-band-07",
+      "sourceRect": [
+        266.12,
+        360.44,
+        296.84,
+        367.52
+      ],
+      "modelRect": {
+        "x": 2.48666,
+        "z": 5.10032,
+        "width": 0.65024,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-08",
+      "sourceRect": [
+        148.64,
+        360.44,
+        190.52,
+        367.52
+      ],
+      "modelRect": {
+        "x": 0,
+        "z": 5.10032,
+        "width": 0.88646,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-09",
+      "sourceRect": [
+        670.76,
+        126.56,
+        677.84,
+        376.88
+      ],
+      "modelRect": {
+        "x": 11.05154,
+        "z": 0.14986,
+        "width": 0.14986,
+        "depth": 5.29844
+      }
+    },
+    {
+      "id": "pdf-band-10",
+      "sourceRect": [
+        595.88,
+        336.8,
+        601.52,
+        376.88
+      ],
+      "modelRect": {
+        "x": 9.46658,
+        "z": 4.59994,
+        "width": 0.11938,
+        "depth": 0.84836
+      }
+    },
+    {
+      "id": "pdf-band-11",
+      "sourceRect": [
+        578.36,
+        336.8,
+        584,
+        376.88
+      ],
+      "modelRect": {
+        "x": 9.09574,
+        "z": 4.59994,
+        "width": 0.11938,
+        "depth": 0.84836
+      }
+    },
+    {
+      "id": "pdf-band-12",
+      "sourceRect": [
+        148.64,
+        367.52,
+        186.44,
+        376.88
+      ],
+      "modelRect": {
+        "x": 0,
+        "z": 5.25018,
+        "width": 0.8001,
+        "depth": 0.19812
+      }
+    },
+    {
+      "id": "pdf-band-13",
+      "sourceRect": [
+        578.36,
+        376.88,
+        602.24,
+        383.96
+      ],
+      "modelRect": {
+        "x": 9.09574,
+        "z": 5.4483,
+        "width": 0.50546,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-14",
+      "sourceRect": [
+        289.76,
+        367.52,
+        296.84,
+        393.44
+      ],
+      "modelRect": {
+        "x": 2.98704,
+        "z": 5.25018,
+        "width": 0.14986,
+        "depth": 0.54864
+      }
+    },
+    {
+      "id": "pdf-band-15",
+      "sourceRect": [
+        432.8,
+        365.12,
+        439.88,
+        393.44
+      ],
+      "modelRect": {
+        "x": 6.01472,
+        "z": 5.19938,
+        "width": 0.14986,
+        "depth": 0.59944
+      }
+    },
+    {
+      "id": "pdf-band-16",
+      "sourceRect": [
+        289.76,
+        393.44,
+        301.52,
+        400.52
+      ],
+      "modelRect": {
+        "x": 2.98704,
+        "z": 5.79882,
+        "width": 0.24892,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-17",
+      "sourceRect": [
+        428.12,
+        393.44,
+        439.88,
+        400.52
+      ],
+      "modelRect": {
+        "x": 5.91566,
+        "z": 5.79882,
+        "width": 0.24892,
+        "depth": 0.14986
+      }
+    },
+    {
+      "id": "pdf-band-18",
+      "sourceRect": [
+        640.04,
+        376.88,
+        677.84,
+        424.16
+      ],
+      "modelRect": {
+        "x": 10.4013,
+        "z": 5.4483,
+        "width": 0.8001,
+        "depth": 1.00076
+      }
+    },
+    {
+      "id": "pdf-band-19",
+      "sourceRect": [
+        148.64,
+        376.88,
+        186.44,
+        424.16
+      ],
+      "modelRect": {
+        "x": 0,
+        "z": 5.4483,
+        "width": 0.8001,
+        "depth": 1.00076
+      }
+    },
+    {
+      "id": "pdf-band-20",
+      "sourceRect": [
+        578.36,
+        383.96,
+        590.12,
+        428.84
+      ],
+      "modelRect": {
+        "x": 9.09574,
+        "z": 5.59816,
+        "width": 0.24892,
+        "depth": 0.94996
+      }
+    },
+    {
+      "id": "pdf-band-21",
+      "sourceRect": [
+        428.12,
+        400.52,
+        439.88,
+        428.84
+      ],
+      "modelRect": {
+        "x": 5.91566,
+        "z": 5.94868,
+        "width": 0.24892,
+        "depth": 0.59944
+      }
+    },
+    {
+      "id": "pdf-band-22",
+      "sourceRect": [
+        289.76,
+        400.52,
+        301.52,
+        428.84
+      ],
+      "modelRect": {
+        "x": 2.98704,
+        "z": 5.94868,
+        "width": 0.24892,
+        "depth": 0.59944
+      }
+    },
+    {
+      "id": "pdf-band-23",
+      "sourceRect": [
+        517.88,
+        126.56,
+        523.52,
+        140.72
+      ],
+      "modelRect": {
+        "x": 7.81558,
+        "z": 0.14986,
+        "width": 0.11938,
+        "depth": 0.29972
+      }
+    },
+    {
+      "id": "pdf-band-24",
+      "sourceRect": [
+        291.08,
+        126.56,
+        296.84,
+        152.96
+      ],
+      "modelRect": {
+        "x": 3.01498,
+        "z": 0.14986,
+        "width": 0.12192,
+        "depth": 0.5588
+      }
+    },
+    {
+      "id": "pdf-band-25",
+      "sourceRect": [
+        291.08,
+        152.96,
+        296.84,
+        198.08
+      ],
+      "modelRect": {
+        "x": 3.01498,
+        "z": 0.70866,
+        "width": 0.12192,
+        "depth": 0.95504
+      }
+    },
+    {
+      "id": "pdf-band-26",
+      "sourceRect": [
+        291.08,
+        198.08,
+        296.84,
+        203.84
+      ],
+      "modelRect": {
+        "x": 3.01498,
+        "z": 1.6637,
+        "width": 0.12192,
+        "depth": 0.12192
+      }
+    },
+    {
+      "id": "pdf-band-27",
+      "sourceRect": [
+        155.72,
+        198.08,
+        253.28,
+        203.84
+      ],
+      "modelRect": {
+        "x": 0.14986,
+        "z": 1.6637,
+        "width": 2.06502,
+        "depth": 0.12192
+      }
+    },
+    {
+      "id": "pdf-band-28",
+      "sourceRect": [
+        285.68,
+        246.32,
+        291.32,
+        251.96
+      ],
+      "modelRect": {
+        "x": 2.90068,
+        "z": 2.68478,
+        "width": 0.11938,
+        "depth": 0.11938
+      }
+    },
+    {
+      "id": "pdf-band-29",
+      "sourceRect": [
+        247.64,
+        246.32,
+        285.68,
+        251.96
+      ],
+      "modelRect": {
+        "x": 2.0955,
+        "z": 2.68478,
+        "width": 0.80518,
+        "depth": 0.11938
+      }
+    },
+    {
+      "id": "pdf-band-30",
+      "sourceRect": [
+        595.88,
+        286.16,
+        670.76,
+        291.92
+      ],
+      "modelRect": {
+        "x": 9.46658,
+        "z": 3.52806,
+        "width": 1.58496,
+        "depth": 0.12192
+      }
+    },
+    {
+      "id": "pdf-band-31",
+      "sourceRect": [
+        517.88,
+        183.2,
+        523.52,
+        329.72
+      ],
+      "modelRect": {
+        "x": 7.81558,
+        "z": 1.34874,
+        "width": 0.11938,
+        "depth": 3.10134
+      }
+    },
+    {
+      "id": "pdf-band-32",
+      "sourceRect": [
+        285.68,
+        251.96,
+        291.32,
+        360.44
+      ],
+      "modelRect": {
+        "x": 2.90068,
+        "z": 2.80416,
+        "width": 0.11938,
+        "depth": 2.29616
+      }
+    }
+  ],
+  "w3Calibration": {
+    "sourceStart": [
+      301.52,
+      393.44
+    ],
+    "sourceEnd": [
+      428.12,
+      393.44
+    ],
+    "sourceWidthPoints": 126.6,
+    "metresPerSourceUnit": 0.021166666666666667,
+    "measuredWidthM": 2.6797,
+    "targetWidthM": 2.68,
+    "differenceM": -0.0003,
+    "status": "confirmed"
+  }
+}
