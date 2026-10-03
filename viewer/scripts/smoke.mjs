@@ -98,8 +98,11 @@ try{
   const inside=await page.evaluate(()=>window.idm.viewer.getView());
   record('inside view switches',inside.view==='inside',inside);
   await viewportShot(page,'desktop-inside.png');
+  // Functional interaction checks run in low tier so SwiftShader CI is not frame-starved.
+  // Visual screenshots above remain high quality.
+  await page.evaluate(()=>window.idm.viewer.setQuality('low'));
   await page.click('[data-view="axon"]');
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(1200);
 
   const editFixture=await page.evaluate(()=>{
     const v=window.idm.viewer;
@@ -117,7 +120,7 @@ try{
   record('selection, rotation and undo work in a clear edit area',editFixture.placed&&editFixture.rotated&&editFixture.undone&&Math.abs(editFixture.after-editFixture.before)>0.1&&Math.abs(editFixture.restored-editFixture.before)<0.01,editFixture);
 
   await page.evaluate(()=>window.idm.viewer.setView('top'));
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(2200);
   const moveStart=await page.evaluate(idx=>{
     const v=window.idm.viewer;
     v.selectItem(idx);
@@ -175,14 +178,14 @@ try{
     const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     v.focusRoom('rm-open-living');
     v.setView('walk');
-    await delay(350);
+    await delay(1200);
     const start=v.walkState();
     let best=0;
     let bestDirection=null;
     for(const direction of [[0,1],[1,0],[0,-1],[-1,0]]){
       const before=v.walkState().position;
       v.walkAnalog(direction[0],direction[1]);
-      await delay(550);
+      await delay(1200);
       v.walkAnalog(0,0);
       await delay(120);
       const after=v.walkState().position;
