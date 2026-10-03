@@ -156,7 +156,8 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
     if (boundary.length < 3) continue;
     const wet = isWetRoom(room);
     const outdoor = /balcony|terrace|patio|deck|yard/.test(String(room.kind || '').toLowerCase());
-    const material = outdoor ? m.concrete : wet ? m.floorTile : room.kind === 'bedroom' ? m.plank : m.floor;
+    const woodFloor = /bedroom|living|dining|open|hall|entry/i.test(String(room.kind || ''));
+    const material = outdoor ? m.concrete : wet ? m.floorTile : woodFloor ? m.plank : m.floor;
     const slab = slabMesh(boundary, SLAB, material);
     slab.position.y = FLOOR_Y;
     slab.name = `floor-${room.id}`;
@@ -299,19 +300,20 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
 
       const frameDepth = thickness + 0.02;
       const jamb = 0.05;
+      const frameMaterial = (opening.type === 'window' || opening.type === 'sliding') ? m.frame : m.white;
       // Lining: two jambs and a head, always present, in every opening type.
       for (const side of [-1, 1]) {
-        const post = boxMesh(jamb, h, frameDepth, m.white);
+        const post = boxMesh(jamb, h, frameDepth, frameMaterial);
         post.position.set(side * (w / 2 - jamb / 2), cut.sill + h / 2, 0);
         post.userData = {id: `${opening.id}-jamb${side}`, layer: 'architecture', collision: false, role: 'frame'};
         part.add(post);
       }
-      const lintel = boxMesh(w, jamb, frameDepth, m.white);
+      const lintel = boxMesh(w, jamb, frameDepth, frameMaterial);
       lintel.position.set(0, cut.head - jamb / 2, 0);
       lintel.userData = {id: `${opening.id}-lintel`, layer: 'architecture', collision: false, role: 'frame'};
       part.add(lintel);
       if (cut.sill > 0.02) {
-        const board = boxMesh(w + 0.06, 0.03, frameDepth + 0.05, m.white);
+        const board = boxMesh(w + 0.06, 0.03, frameDepth + 0.05, frameMaterial);
         board.position.set(0, cut.sill + 0.015, 0);
         board.userData = {id: `${opening.id}-sill`, layer: 'architecture', collision: false, role: 'frame'};
         part.add(board);
@@ -328,7 +330,7 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
           pane.castShadow = false;
           part.add(pane);
           // A slim mullion keeps the glazing from reading as a floating rectangle.
-          const mullion = boxMesh(0.035, h - jamb * 2, frameDepth * 0.9, m.white);
+          const mullion = boxMesh(0.035, h - jamb * 2, frameDepth * 0.9, m.frame);
           mullion.position.set(-w / 2 + jamb + paneWidth * i + 0.02, cut.sill + h / 2, 0);
           mullion.userData = {id: `${opening.id}-mullion${i}`, layer: 'architecture', collision: false, role: 'frame'};
           part.add(mullion);
