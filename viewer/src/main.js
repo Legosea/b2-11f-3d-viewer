@@ -84,7 +84,7 @@ $('#app').innerHTML = `
     <div class="scene-bottom">
       <div class="toolbar">
         <button type="button" class="tool" id="wallToggle" aria-pressed="false">${t('toolWalls')}</button>
-        <button type="button" class="tool" id="labelToggle" aria-pressed="true">${t('toolLabels')}</button>
+        <button type="button" class="tool" id="labelToggle" aria-pressed="true">${t('toolLabels')}</button>\n        <button type="button" class="tool" id="reviewOverlay" aria-pressed="false">${t('toolReviewOverlay')}</button>
         <button type="button" class="tool" id="photo">${t('toolPhoto')}</button>
         <button type="button" class="tool" id="measure" aria-pressed="false">${t('toolMeasure')}</button>
         <button type="button" class="tool" id="resetView">${t('toolReset')}</button>
@@ -258,6 +258,7 @@ if (caseData) {
   try {
     viewer = createViewer($('#viewport'), caseData, {
       labelRoot: $('#labels'),
+      reviewOverlayUrl: caseData.plan?.source?.reviewOverlay ? `${CASE_BASE}/${caseData.plan.source.reviewOverlay}` : null,
       onProgress: (stage, ratio) => setProgress(ratio, stage === 'compile' ? t('loadingCompile') : stage === 'textures' ? t('loadingTextures') : ''),
       onRoomSelect: id => viewer?.focusRoom(id),
       onItems: detail => onItems(detail),
@@ -410,6 +411,13 @@ function wireToolbar() {
     viewer.setLabelsVisible(on);
     $('#labelToggle').setAttribute('aria-pressed', String(on));
     $('#labelToggle').classList.toggle('active', on);
+  };
+  $('#reviewOverlay').onclick = () => {
+    const on = !viewer.getReviewOverlay();
+    viewer.setReviewOverlay(on);
+    $('#reviewOverlay').setAttribute('aria-pressed', String(on));
+    $('#reviewOverlay').classList.toggle('active', on);
+    if (on) viewer.setView('top');
   };
   $('#measure').onclick = () => setMeasure($('#measure').getAttribute('aria-pressed') !== 'true');
   $('#photo').onclick = () => {
