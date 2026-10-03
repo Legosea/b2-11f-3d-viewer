@@ -1,0 +1,60 @@
+name: 發布 v5 到 GitHub Pages 根目錄
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'viewer/**'
+      - 'case/**'
+      - '.github/workflows/publish-pages-root.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出程式碼
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+
+      - name: 安裝 viewer 依賴
+        working-directory: viewer
+        run: npm ci
+
+      - name: 將 case 契約連結進 viewer
+        working-directory: viewer
+        run: npm run link-case -- ../case
+
+      - name: 建置正式版
+        working-directory: viewer
+        run: npm run build
+
+      - name: 更新 GitHub Pages 根目錄輸出
+        run: |
+          rm -rf assets
+          cp viewer/dist/index.html ./index.html
+          cp -R viewer/dist/assets ./assets
+          touch .nojekyll
+
+      - name: 提交建置輸出
+        run: |
+          if git diff --quiet -- index.html assets .nojekyll; then
+            echo "沒有需要更新的正式輸出"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets .nojekyll
+          git commit -m "build: 發布 B2-11F v5 GitHub Pages"
+          git push origin HEAD:main
