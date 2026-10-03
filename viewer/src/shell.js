@@ -391,24 +391,7 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
           }
         }
       } else if (opening.type === 'door') {
-        // Leaves are drawn open. A closed leaf would block the walkthrough routes the plan
-        // declares, and an open leaf also reads correctly in the 2D/top view.
-        const swing = Number.isFinite(opening.swing) ? opening.swing : 90;
-        const hinge = new T.Group();
-        hinge.position.set(Math.sign(swing || 1) * (w / 2 - jamb), 0, 0);
-        hinge.rotation.y = T.MathUtils.degToRad(-Math.sign(swing || 1) * 75);
-        part.add(hinge);
-        const leafWidth = w - jamb * 2;
-        const leaf = boxMesh(leafWidth, h - jamb, 0.038, m.oak, 0.004);
-        leaf.position.set(-Math.sign(swing || 1) * leafWidth / 2, (h - jamb) / 2, 0);
-        leaf.name = `door-leaf-${opening.id}`;
-        leaf.userData = {id: `${opening.id}-leaf`, layer: 'architecture', collision: true, role: 'door'};
-        hinge.add(leaf);
-        const handle = new T.Mesh(new T.CylinderGeometry(0.011, 0.011, 0.1, 12), m.metal);
-        handle.rotation.z = Math.PI / 2;
-        handle.position.set(-Math.sign(swing || 1) * (leafWidth - 0.09), 1.05, 0.035);
-        handle.castShadow = true;
-        hinge.add(handle);
+        // Empty-shell presentation: keep the architectural opening and frame only.
       }
     }
   }
