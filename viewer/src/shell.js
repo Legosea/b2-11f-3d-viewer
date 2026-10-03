@@ -346,12 +346,6 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
           && Math.abs(gridRows.reduce((sum, value) => sum + value, 0) - h) < 0.02;
 
         if (validGrid) {
-          const pane = new T.Mesh(new T.BoxGeometry(w - jamb * 2, h - jamb * 2, 0.012), m.glass);
-          pane.position.set(0, cut.sill + h / 2, 0);
-          pane.name = `glass-${opening.id}-grid`;
-          pane.userData = {id: `${opening.id}-glass-grid`, layer: 'architecture', collision: false, role: 'glazing'};
-          pane.castShadow = false;
-          part.add(pane);
 
           let accX = 0;
           for (let i = 0; i < gridColumns.length - 1; i++) {
@@ -376,12 +370,6 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
           const panes = opening.type === 'sliding' ? 2 : 1;
           for (let i = 0; i < panes; i++) {
             const paneWidth = (w - jamb * 2) / panes;
-            const pane = new T.Mesh(new T.BoxGeometry(paneWidth - 0.02, h - jamb * 2, 0.012), m.glass);
-            pane.position.set(-w / 2 + jamb + paneWidth * (i + 0.5), cut.sill + h / 2, opening.type === 'sliding' ? (i ? 0.03 : -0.03) : 0);
-            pane.name = `glass-${opening.id}-${i}`;
-            pane.userData = {id: `${opening.id}-glass${i}`, layer: 'architecture', collision: false, role: 'glazing'};
-            pane.castShadow = false;
-            part.add(pane);
             if (i > 0 || panes > 1) {
               const mullion = boxMesh(0.035, h - jamb * 2, frameDepth * 0.9, m.frame);
               mullion.position.set(-w / 2 + jamb + paneWidth * i, cut.sill + h / 2, 0);
