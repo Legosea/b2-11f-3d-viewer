@@ -243,7 +243,7 @@ export function createViewer(container, caseData, options = {}) {
   });
 
   stack.compile(root);
-  setView('orbit');
+  setView('axon');
   setLight(LIGHT_DEFAULTS);
 
   // ---------- public API ----------
