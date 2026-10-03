@@ -17,3 +17,5 @@ Plan: docs/superpowers/plans/2026-10-03-b2-11f-v5-implementation.md
 - Visual refinement: replaced the dark orange procedural wood base with a light neutral grain, applied the style floor token to the plank material, lightened the floor/wood palette, and hid room labels by default. Regression tests failed first and now pass.
 - Visual refinement: changed the default axonometric camera to the northwest side and made cutaway directional. Only north/west camera-facing perimeter walls are lowered to 0.95 m; interior and far walls remain full and far-wall glazing (including W3) remains visible. This is presentation-only; plan.json geometry is unchanged.
 - QA checkpoint: triggering the complete browser/product-link/mobile/W3/editing/walkthrough/luminance suite after the final dollhouse presentation changes.
+
+- Final pre-merge QA checkpoint after adding the Pages publish workflow.
