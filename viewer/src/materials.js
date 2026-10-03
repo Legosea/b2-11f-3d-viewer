@@ -134,7 +134,7 @@ export function applyPalette(m, palette = []) {
 export function loadSurfaces(m, {invalidate, onLoaded} = {}) {
   const loader = new T.TextureLoader();
   const publicBase = import.meta.env.BASE_URL || '/';
-  const publicUrl = relative => `${publicBase}${String(relative).replace(/^\\/+/, '')}`;
+  const publicUrl = relative => `${publicBase}${String(relative).replace(/^\/+/, '')}`;
   let loaded = 0;
 
   const configure = (texture, isColor, repeat) => {
