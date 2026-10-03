@@ -133,6 +133,8 @@ export function applyPalette(m, palette = []) {
 // and a scanned diffuse is neutralised in-shader so palette tinting keeps working.
 export function loadSurfaces(m, {invalidate, onLoaded} = {}) {
   const loader = new T.TextureLoader();
+  const publicBase = import.meta.env.BASE_URL || '/';
+  const publicUrl = relative => `${publicBase}${String(relative).replace(/^\\/+/, '')}`;
   let loaded = 0;
 
   const configure = (texture, isColor, repeat) => {
@@ -159,7 +161,7 @@ export function loadSurfaces(m, {invalidate, onLoaded} = {}) {
 
   const wire = (asset, slots, repeat, normalScale, materials, after) => {
     for (const [slot, target, isColor] of slots) {
-      loader.load(`/textures/${asset}_${slot}.jpg`, texture => {
+      loader.load(publicUrl(`textures/${asset}_${slot}.jpg`), texture => {
         configure(texture, isColor, repeat);
         for (const material of materials) {
           material[target] = texture;
