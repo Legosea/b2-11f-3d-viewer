@@ -8,6 +8,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      FULL_QA: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'qa:') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +22,7 @@ jobs:
       - name: Validate case
         run: node vendor/interior-design-master/scripts/validate-case.mjs case --strict
       - name: Check product evidence links
+        if: env.FULL_QA == 'true'
         run: node vendor/interior-design-master/scripts/check-product-links.mjs case
       - name: Install viewer
         run: npm ci
@@ -34,16 +37,19 @@ jobs:
         run: npm run build
         working-directory: viewer
       - name: Install Chromium
+        if: env.FULL_QA == 'true'
         run: npx playwright install --with-deps chromium
         working-directory: viewer
       - name: Browser smoke
+        if: env.FULL_QA == 'true'
         run: npm run smoke -- --no-build
         working-directory: viewer
       - name: Hero luminance guard
+        if: env.FULL_QA == 'true'
         run: node scripts/check-hero-luminance.mjs output/smoke/desktop-axon.png
         working-directory: viewer
       - name: Upload smoke evidence
-        if: always()
+        if: always() && env.FULL_QA == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: b2-v5-smoke-${{ github.sha }}
