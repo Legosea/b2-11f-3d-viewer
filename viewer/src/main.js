@@ -10,7 +10,11 @@ import {
 } from './state.js';
 
 const $ = selector => document.querySelector(selector);
-export const caseBaseUrl = base => `${String(base || '/').replace(/\\/?$/, '/') }case`;\nconst CASE_BASE = caseBaseUrl(import.meta.env.BASE_URL);
+export const caseBaseUrl = base => {
+  const value = String(base || '/');
+  return `${value.endsWith('/') ? value : value + '/'}case`;
+};
+const CASE_BASE = caseBaseUrl(import.meta.env.BASE_URL);
 
 // ---------- case loading ----------
 async function loadCase() {
