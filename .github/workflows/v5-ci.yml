@@ -1,0 +1,23 @@
+name: v5 CI
+on:
+  push:
+    branches: [feature/b2-v5-native]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - run: npm ci
+        working-directory: viewer
+      - run: node --test tests/*.test.mjs
+        working-directory: viewer
+      - run: npm run build
+        working-directory: viewer
