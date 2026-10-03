@@ -72,10 +72,10 @@ export function createLighting({scene, renderer, shell, m, plan}) {
   const bounds = shell.bounds;
   const radius = Math.max(bounds.radius, 3);
 
-  const hemi = new T.HemisphereLight(0xfff7e6, 0x8e9684, 1.2);
+  const hemi = new T.HemisphereLight(0xfff7e6, 0x8e9684, 0.65);
   scene.add(hemi);
 
-  const sun = new T.DirectionalLight(0xffeed4, 2.4);
+  const sun = new T.DirectionalLight(0xffeed4, 1.35);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.normalBias = 0.018;
@@ -94,7 +94,7 @@ export function createLighting({scene, renderer, shell, m, plan}) {
   sun.target.position.set(bounds.centerX, 0, bounds.centerZ);
   scene.add(sun, sun.target);
 
-  const fill = new T.DirectionalLight(0xe4eeff, 1.1);
+  const fill = new T.DirectionalLight(0xe4eeff, 0.38);
   fill.position.set(bounds.centerX + radius, radius * 1.4, bounds.centerZ + radius);
   scene.add(fill);
 
