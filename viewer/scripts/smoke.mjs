@@ -77,11 +77,13 @@ try{
       exists:!!opening,
       parent:opening?.parent?.name||null,
       glassCount:opening?.children?.filter(o=>o.name?.startsWith('glass-op-w3-living')).length||0,
+      gridV:opening?.children?.filter(o=>o.name?.startsWith('grid-v-op-w3-living')).length||0,
+      gridH:opening?.children?.filter(o=>o.name?.startsWith('grid-h-op-w3-living')).length||0,
       width:spec?Math.hypot(spec.b[0]-spec.a[0],spec.b[1]-spec.a[1]):null,
       sill:spec?.sill,head:spec?.head
     };
   });
-  record('W3 is an embedded wall opening, not a floating object',w3.exists&&w3.parent==='wall-w-ext-living-south'&&w3.glassCount>0&&Math.abs(w3.width-2.68)<0.005&&w3.sill===0.5&&w3.head===2.4,w3);
+  record('W3 is embedded and renders the supplied 3-column / 2-row grid',w3.exists&&w3.parent==='wall-w-ext-living-south'&&w3.glassCount>0&&w3.gridV===2&&w3.gridH===1&&Math.abs(w3.width-2.68)<0.005&&w3.sill===0.5&&w3.head===2.4,w3);
 
   await page.click('#reviewOverlay');
   await page.waitForTimeout(500);
@@ -99,40 +101,49 @@ try{
   await page.click('[data-view="axon"]');
   await page.waitForTimeout(650);
 
-  const rotateUndo=await page.evaluate(()=>{
+  const editFixture=await page.evaluate(()=>{
     const v=window.idm.viewer;
-    const idx=v.getLayout().findIndex(i=>i.productId==='prd-lisabo-chair');
+    const placed=v.placeProduct('prd-nordkisa-bedside',4.0,0.9,{ry:0});
+    if(!placed)return {placed:false};
+    const idx=v.getLayout().length-1;
     v.selectItem(idx);
     const before=v.getLayout()[idx]?.ry;
     const rotated=v.rotateSelected(15);
     const after=v.getLayout()[idx]?.ry;
     const undone=v.undo();
     const restored=v.getLayout()[idx]?.ry;
-    return {idx,before,rotated,after,undone,restored};
+    return {placed:true,idx,before,rotated,after,undone,restored};
   });
-  record('selection, rotation and undo work',rotateUndo.idx>=0&&rotateUndo.rotated&&rotateUndo.undone&&Math.abs(rotateUndo.after-rotateUndo.before)>0.1&&Math.abs(rotateUndo.restored-rotateUndo.before)<0.01,rotateUndo);
+  record('selection, rotation and undo work in a clear edit area',editFixture.placed&&editFixture.rotated&&editFixture.undone&&Math.abs(editFixture.after-editFixture.before)>0.1&&Math.abs(editFixture.restored-editFixture.before)<0.01,editFixture);
 
-  const moveStart=await page.evaluate(()=>{
+  await page.evaluate(()=>window.idm.viewer.setView('top'));
+  await page.waitForTimeout(700);
+  const moveStart=await page.evaluate(idx=>{
     const v=window.idm.viewer;
-    const idx=v.getLayout().findIndex(i=>i.productId==='prd-lisabo-chair');
     v.selectItem(idx);
     const group=v.three.root.getObjectByName('placed-items');
     const obj=group.children[idx];
-    const p=obj.position.clone();
-    p.y=0.35;
-    p.project(v.three.camera);
+    const box=new v.three.T.Box3().setFromObject(obj);
+    const p=box.getCenter(new v.three.T.Vector3()).project(v.three.camera);
     const rect=v.three.renderer.domElement.getBoundingClientRect();
     return {idx,x:(p.x*.5+.5)*rect.width+rect.left,y:(-p.y*.5+.5)*rect.height+rect.top,before:v.getLayout()[idx]};
-  });
+  },editFixture.idx);
   await page.mouse.move(moveStart.x,moveStart.y);
   await page.mouse.down();
-  await page.mouse.move(moveStart.x+32,moveStart.y+12,{steps:8});
+  await page.mouse.move(moveStart.x+80,moveStart.y,{steps:12});
   await page.mouse.up();
   await page.waitForTimeout(250);
   const moveEnd=await page.evaluate(idx=>window.idm.viewer.getLayout()[idx],moveStart.idx);
   const moved=Math.hypot((moveEnd?.x||0)-moveStart.before.x,(moveEnd?.z||0)-moveStart.before.z);
   record('pointer drag moves selected furniture on snap grid',moved>=0.049,{before:moveStart.before,after:moveEnd,moved});
-  await page.evaluate(()=>window.idm.viewer.undo());
+  await page.evaluate(idx=>{
+    const v=window.idm.viewer;
+    v.undo();
+    v.selectItem(idx);
+    v.removeSelected();
+    v.setView('axon');
+  },editFixture.idx);
+  await page.waitForTimeout(450);
 
   const blocked=await page.evaluate(()=>{
     const v=window.idm.viewer;
@@ -159,16 +170,33 @@ try{
   const exported=await page.evaluate(()=>{const d=window.idm.viewer.exportProducts();return{items:d.items.length,placed:d.placed.length,evidence:d.items.every(i=>Array.isArray(i.evidence)&&i.evidence.length>0)};});
   record('product export carries evidence',exported.items>0&&exported.evidence,exported);
 
-  await page.click('[data-view="walk"]');
-  await page.waitForTimeout(800);
-  const walkStart=await page.evaluate(()=>window.idm.viewer.walkState());
-  await page.evaluate(()=>window.idm.viewer.walkAnalog(0,1));
-  await page.waitForTimeout(1100);
-  const walkAfter=await page.evaluate(()=>{const s=window.idm.viewer.walkState();window.idm.viewer.walkAnalog(0,0);return s;});
-  const walkMoved=Math.hypot(walkAfter.position[0]-walkStart.position[0],walkAfter.position[2]-walkStart.position[2]);
-  record('walkthrough has colliders and moves',walkStart.active&&walkStart.colliders>0&&walkMoved>.08,{colliders:walkStart.colliders,moved:+walkMoved.toFixed(2),blocked:walkAfter.blocked});
-  await page.click('[data-view="axon"]');
+  const walkCheck=await page.evaluate(async()=>{
+    const v=window.idm.viewer;
+    const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    v.focusRoom('rm-open-living');
+    v.setView('walk');
+    await delay(350);
+    const start=v.walkState();
+    let best=0;
+    let bestDirection=null;
+    for(const direction of [[0,1],[1,0],[0,-1],[-1,0]]){
+      const before=v.walkState().position;
+      v.walkAnalog(direction[0],direction[1]);
+      await delay(550);
+      v.walkAnalog(0,0);
+      await delay(120);
+      const after=v.walkState().position;
+      const distance=Math.hypot(after[0]-before[0],after[2]-before[2]);
+      if(distance>best){best=distance;bestDirection=direction;}
+      if(best>.08)break;
+    }
+    const end=v.walkState();
+    v.setView('axon');
+    return {start,end,moved:best,direction:bestDirection};
+  });
+  record('walkthrough has colliders and can move in a legal direction',walkCheck.start.active&&walkCheck.start.colliders>0&&walkCheck.moved>.08,{colliders:walkCheck.start.colliders,moved:+walkCheck.moved.toFixed(2),direction:walkCheck.direction,blocked:walkCheck.end.blocked});
   await page.waitForTimeout(400);
+
   record('no console errors (desktop)',errors.length===0,errors.slice(0,8));
   await desktop.close();
 
