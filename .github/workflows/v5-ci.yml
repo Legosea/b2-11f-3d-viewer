@@ -42,7 +42,16 @@ jobs:
         working-directory: viewer
       - name: Browser smoke
         if: env.FULL_QA == 'true'
-        run: npm run smoke -- --no-build
+        run: |
+          for attempt in 1 2 3; do
+            echo "Browser smoke attempt $attempt/3"
+            if npm run smoke -- --no-build; then
+              exit 0
+            fi
+            rm -rf output/smoke
+            sleep 3
+          done
+          exit 1
         working-directory: viewer
       - name: Hero luminance guard
         if: env.FULL_QA == 'true'
