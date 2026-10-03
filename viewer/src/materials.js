@@ -20,10 +20,10 @@ function noiseTexture(kind, renderer) {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  ctx.fillStyle = kind === 'wood' ? '#ab8664' : kind === 'rug' ? '#c9bb98' : '#e3dccb';
+  ctx.fillStyle = kind === 'wood' ? '#e8e1d7' : kind === 'rug' ? '#c9bb98' : '#e3dccb';
   ctx.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 1800; i++) {
-    ctx.strokeStyle = kind === 'wood' ? `rgba(62,33,17,${rand() * 0.13})` : `rgba(79,64,41,${rand() * 0.12})`;
+    ctx.strokeStyle = kind === 'wood' ? `rgba(104,82,58,${0.035 + rand() * 0.055})` : `rgba(79,64,41,${rand() * 0.12})`;
     ctx.lineWidth = rand() * 1.4;
     const x = rand() * 256;
     const y = rand() * 256;
@@ -122,7 +122,7 @@ export function applyPalette(m, palette = []) {
   set(m.wall, wall); set(m.paint, wall); set(m.plaster, wall); set(m.ceiling, wall);
   set(m.wood, pick('wood')); set(m.oak, pick('wood'));
   set(m.fabric, pick('fabric')); set(m.linen, pick('fabric'));
-  set(m.floor, pick('floor')); set(m.stone, pick('floor'));
+  set(m.floor, pick('floor')); set(m.stone, pick('floor')); set(m.plank, pick('floor'));
   set(m.accentFabric, pick('accent'));
   set(m.frame, pick('frame'));
   return palette;
