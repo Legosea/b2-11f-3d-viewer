@@ -146,6 +146,16 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
 
   const bounds = planBounds(plan);
   const wallHeight = Math.max(...(plan.walls || []).map(w => w.height || 0), 2.4);
+  const CUT_HEIGHT = 0.95;
+  // Default hero is northwest of the plan. Only perimeter walls on that camera-facing
+  // north/west edge become a presentation cutaway; all other walls stay architecturally full.
+  const nearCutWallIds = new Set((plan.walls || []).filter(wall => {
+    const xs = [wall.a[0], wall.b[0]];
+    const zs = [wall.a[1], wall.b[1]];
+    const west = Math.max(...xs) <= bounds.minX + 0.22;
+    const north = Math.max(...zs) <= bounds.minZ + 0.22;
+    return west || north;
+  }).map(wall => wall.id));
 
   const wallMeshes = [];   // solid pieces used for collision and wall snapping
   const wallFaces = [];    // inward-facing surfaces, for wall-mounted items
@@ -302,7 +312,7 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
       const part = new T.Group();
       part.name = `opening-${opening.id}`;
       part.position.set(centre, 0, 0);
-      part.userData = {id: opening.id, layer: 'architecture', collision: false, role: 'opening', type: opening.type};
+      part.userData = {id: opening.id, layer: 'architecture', collision: false, role: 'opening', type: opening.type, wall: wall.id};
       wallRoot.add(part);
       openingParts.push(part);
 
@@ -523,29 +533,33 @@ export function createShell(plan, m, labelRoot, onRoomSelect) {
     for (const part of ceilingParts) part.visible = visible;
   }
 
-  // Cutaway: low walls in orbit/top so the interior is legible from outside.
+  // Directional dollhouse cutaway: only the north/west camera-facing perimeter is lowered.
+  // The architectural plan is unchanged; this is strictly a presentation transform.
   function setWallHeightMode(mode) {
     const full = mode === 'full';
     for (const mesh of wallMeshes) {
-      const {bottom, top, ownHeight} = mesh.userData;
-      if (full) {
+      const {bottom, top, ownHeight, wall} = mesh.userData;
+      const cutThisWall = !full && nearCutWallIds.has(wall);
+      if (!cutThisWall) {
         mesh.visible = true;
         mesh.scale.y = 1;
         mesh.position.y = bottom + ownHeight / 2;
       } else {
-        const cut = Math.min(top, 1.15);
+        const cut = Math.min(top, CUT_HEIGHT);
         mesh.visible = bottom < cut - 0.01;
         const wanted = Math.max(0.02, Math.min(ownHeight, cut - bottom));
         mesh.scale.y = wanted / ownHeight;
         mesh.position.y = bottom + wanted / 2;
       }
     }
-    for (const part of openingParts) part.visible = full;
+    for (const part of openingParts) {
+      part.visible = full || !nearCutWallIds.has(part.userData.wall);
+    }
   }
 
   return {
     group, bounds, rooms, labels, wallFaces, wallHeight,
-    wallMeshes, ceilingParts, openingParts,
+    wallMeshes, ceilingParts, openingParts, nearCutWallIds,
     wallBoxes, fixedBoxes, roomAt, setCeilingVisible, setWallHeightMode,
     glassMaterials: [{material: m.glass, amount: 0.45}]
   };
