@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "path": "case/inputs/plan/2024-07-14-Model(1).pdf",
+      "sha256": "d878e93f6c78bbd3fd113eb03eaab01365e2232e17d59ab39371d03190226144",
+      "role": "architectural-plan",
+      "mime": "application/pdf",
+      "pages": 1,
+      "status": "source hash retained; original supplied by user"
+    },
+    {
+      "path": "case/inputs/style/reference-dollhouse.jpg",
+      "sha256": "a528644be69b34d702f652f1bad9b529105d937396e31907149efdfc428057de",
+      "role": "style-reference",
+      "mime": "image/jpeg",
+      "status": "source hash retained; original supplied by user"
+    }
+  ]
+}

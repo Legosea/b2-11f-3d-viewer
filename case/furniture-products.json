@@ -1,0 +1,553 @@
+[
+  {
+    "id": "prd-kivik-sofa",
+    "role": "sofa",
+    "brand": "IKEA",
+    "name": "KIVIK 3-seat sofa, Tresund light beige",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan KIVIK 3-seat sofa, Tresund light beige dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/sofas/sofas/kivik-spr-49482832"
+      ],
+      "selectedReason": "Official Taiwan page publishes 228 × 95 × 83 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 2280,
+      "depth": 950,
+      "height": 830,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/sofas/sofas/kivik-spr-49482832",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/sofas/sofas/kivik-spr-49482832",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "2280 × 950 × 830 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/sofas/sofas/kivik-spr-49482832",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-lack-coffee",
+    "role": "coffee table",
+    "brand": "IKEA",
+    "name": "LACK coffee table, white stained oak effect",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan LACK coffee table, white stained oak effect dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/sofa-tables/sofa-tables-and-side-tables/lack-art-90431533"
+      ],
+      "selectedReason": "Official Taiwan page identifies the 90 × 55 cm variant; viewer uses published 45 cm height.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 900,
+      "depth": 550,
+      "height": 450,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/sofa-tables/sofa-tables-and-side-tables/lack-art-90431533",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/sofa-tables/sofa-tables-and-side-tables/lack-art-90431533",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "900 × 550 × 450 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/sofa-tables/sofa-tables-and-side-tables/lack-art-90431533",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-lisabo-table",
+    "role": "dining table",
+    "brand": "IKEA",
+    "name": "LISABO table, ash veneer, 140x78 cm",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan LISABO table, ash veneer, 140x78 cm dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/dining-tables/tables/lisabo-art-80365717"
+      ],
+      "selectedReason": "Official Taiwan page publishes 140 × 78 × 74 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 1400,
+      "depth": 780,
+      "height": 740,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/dining-tables/tables/lisabo-art-80365717",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/dining-tables/tables/lisabo-art-80365717",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "1400 × 780 × 740 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/dining-tables/tables/lisabo-art-80365717",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-lisabo-chair",
+    "role": "dining chair",
+    "brand": "IKEA",
+    "name": "LISABO chair, ash/Tallmyra white-black",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan LISABO chair, ash/Tallmyra white-black dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/dining-seating/upholstered-chairs/lisabo-art-50561041"
+      ],
+      "selectedReason": "Official Taiwan page publishes 46 × 51 × 80 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 460,
+      "depth": 510,
+      "height": 800,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/dining-seating/upholstered-chairs/lisabo-art-50561041",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/dining-seating/upholstered-chairs/lisabo-art-50561041",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "460 × 510 × 800 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/dining-seating/upholstered-chairs/lisabo-art-50561041",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-malm-single",
+    "role": "bed single",
+    "brand": "IKEA",
+    "name": "MALM bed frame, white stained oak veneer/LURÖY, 90x200",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan MALM bed frame, white stained oak veneer/LURÖY, 90x200 dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-99132290"
+      ],
+      "selectedReason": "Official Taiwan page publishes outer 105 × 209 × 100 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 1050,
+      "depth": 2090,
+      "height": 1000,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-99132290",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-99132290",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "1050 × 2090 × 1000 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-99132290",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-malm-double",
+    "role": "bed double",
+    "brand": "IKEA",
+    "name": "MALM bed frame, white stained oak veneer/LURÖY, 150x200",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan MALM bed frame, white stained oak veneer/LURÖY, 150x200 dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-79027389"
+      ],
+      "selectedReason": "Official Taiwan page publishes outer 166 × 209 × 100 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 1660,
+      "depth": 2090,
+      "height": 1000,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-79027389",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-79027389",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "1660 × 2090 × 1000 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/beds/bed-frames/malm-spr-79027389",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-micke-desk",
+    "role": "desk",
+    "brand": "IKEA",
+    "name": "MICKE desk, white stained oak effect, 105x50 cm",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan MICKE desk, white stained oak effect, 105x50 cm dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/home-workspace/home-desks/micke-art-70491132"
+      ],
+      "selectedReason": "Official Taiwan page publishes 105 × 50 × 75 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 1050,
+      "depth": 500,
+      "height": 750,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/home-workspace/home-desks/micke-art-70491132",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/home-workspace/home-desks/micke-art-70491132",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "1050 × 500 × 750 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/home-workspace/home-desks/micke-art-70491132",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-flintan-chair",
+    "role": "desk chair",
+    "brand": "IKEA",
+    "name": "FLINTAN office chair, beige",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan FLINTAN office chair, beige dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/office-workspace/office-chairs/flintan-art-50492203"
+      ],
+      "selectedReason": "Official Taiwan page publishes width/depth 71 cm and max height 114 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 710,
+      "depth": 710,
+      "height": 1140,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/office-workspace/office-chairs/flintan-art-50492203",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/office-workspace/office-chairs/flintan-art-50492203",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "710 × 710 × 1140 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/office-workspace/office-chairs/flintan-art-50492203",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "warn",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Chair height is adjustable; viewer uses max 1140 mm envelope.",
+        "Delivery route and ergonomic fit are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-besta-tv",
+    "role": "tv console",
+    "brand": "IKEA",
+    "name": "BESTÅ TV bench, white stained oak effect, 120x40x38 cm",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan BESTÅ TV bench, white stained oak effect, 120x40x38 cm dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/cabinets/system-cabinets/besta-art-80294857"
+      ],
+      "selectedReason": "Official Taiwan page publishes 120 × 40 × 38 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 1200,
+      "depth": 400,
+      "height": 380,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/cabinets/system-cabinets/besta-art-80294857",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/cabinets/system-cabinets/besta-art-80294857",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "1200 × 400 × 380 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/cabinets/system-cabinets/besta-art-80294857",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  },
+  {
+    "id": "prd-nordkisa-bedside",
+    "role": "bedside table",
+    "brand": "IKEA",
+    "name": "NORDKISA bedside table, bamboo, 40x40 cm",
+    "market": "TW",
+    "research": {
+      "queries": [
+        "IKEA Taiwan NORDKISA bedside table, bamboo, 40x40 cm dimensions"
+      ],
+      "candidateUrls": [
+        "https://www.ikea.com.tw/en/products/chests-and-other-furniture/bedside-tables/nordkisa-art-40447678"
+      ],
+      "selectedReason": "Official Taiwan page publishes 40 × 40 × 67 cm.",
+      "rejected": []
+    },
+    "dimensionsMm": {
+      "width": 400,
+      "depth": 400,
+      "height": 670,
+      "widthStatus": "confirmed",
+      "depthStatus": "confirmed",
+      "heightStatus": "confirmed"
+    },
+    "dimensionSourceUrl": "https://www.ikea.com.tw/en/products/chests-and-other-furniture/bedside-tables/nordkisa-art-40447678",
+    "evidence": [
+      {
+        "sourceUrl": "https://www.ikea.com.tw/en/products/chests-and-other-furniture/bedside-tables/nordkisa-art-40447678",
+        "sourceType": "official",
+        "retrievedAt": "2026-10-03T15:30:00Z",
+        "dimensionQuote": "400 × 400 × 670 mm outer dimensions used by viewer proxy.",
+        "notes": "Dimensions transcribed from the official IKEA Taiwan product page."
+      }
+    ],
+    "purchaseUrl": "https://www.ikea.com.tw/en/products/chests-and-other-furniture/bedside-tables/nordkisa-art-40447678",
+    "price": null,
+    "geometry": {
+      "source": "procedural-proxy",
+      "assetPath": null,
+      "scaleStatus": "confirmed",
+      "pivotStatus": "normalized"
+    },
+    "fit": {
+      "status": "pass",
+      "reasons": [
+        "Outer dimensions fit the assigned room polygon in the authored B2 v5 layout."
+      ],
+      "unknowns": [
+        "Delivery route, packaging clearance and real-world comfort are not verified."
+      ]
+    },
+    "notes": [
+      "Scene geometry is a dimension-accurate procedural proxy, not the manufacturer mesh."
+    ]
+  }
+]

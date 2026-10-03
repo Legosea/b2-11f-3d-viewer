@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "caseId": "b2-11f",
+  "stage": "products",
+  "inputs": [
+    {
+      "path": "case/inputs/plan/2024-07-14-Model(1).pdf",
+      "sha256": "d878e93f6c78bbd3fd113eb03eaab01365e2232e17d59ab39371d03190226144",
+      "role": "architectural-plan"
+    },
+    {
+      "path": "case/inputs/style/reference-dollhouse.jpg",
+      "sha256": "a528644be69b34d702f652f1bad9b529105d937396e31907149efdfc428057de",
+      "role": "style-reference"
+    }
+  ],
+  "planVersion": "1",
+  "styleVersion": "1",
+  "conceptVersion": null,
+  "conceptRenderIds": [],
+  "productVersion": "1",
+  "userConfirmation": {
+    "designSpecConfirmedAt": "2026-10-03"
+  },
+  "assumptions": [
+    "PDF title block visually states scale 1/60; W3 user-confirmed width is the calibration check."
+  ],
+  "unknowns": [
+    "True north is not supplied.",
+    "Several wall thicknesses and non-W3 opening heights remain inferred from plan graphics until separately measured."
+  ],
+  "lastReceipt": null,
+  "layout": [
+    {
+      "productId": "prd-kivik-sofa",
+      "x": 5.05,
+      "z": 3.45,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-lack-coffee",
+      "x": 5.05,
+      "z": 2.55,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-besta-tv",
+      "x": 7.55,
+      "z": 2.55,
+      "ry": 1.5708,
+      "y": 0
+    },
+    {
+      "productId": "prd-lisabo-table",
+      "x": 6.45,
+      "z": 1.55,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-lisabo-chair",
+      "x": 5.55,
+      "z": 1.55,
+      "ry": 1.5708,
+      "y": 0
+    },
+    {
+      "productId": "prd-lisabo-chair",
+      "x": 7.35,
+      "z": 1.55,
+      "ry": -1.5708,
+      "y": 0
+    },
+    {
+      "productId": "prd-lisabo-chair",
+      "x": 6.45,
+      "z": 0.88,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-lisabo-chair",
+      "x": 6.45,
+      "z": 2.22,
+      "ry": 3.1416,
+      "y": 0
+    },
+    {
+      "productId": "prd-malm-single",
+      "x": 1.05,
+      "z": 3.9,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-micke-desk",
+      "x": 2.22,
+      "z": 2.12,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-flintan-chair",
+      "x": 2.18,
+      "z": 2.78,
+      "ry": 3.1416,
+      "y": 0
+    },
+    {
+      "productId": "prd-malm-double",
+      "x": 9.95,
+      "z": 1.58,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-nordkisa-bedside",
+      "x": 8.72,
+      "z": 1.15,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-micke-desk",
+      "x": 8.55,
+      "z": 3.18,
+      "ry": 0,
+      "y": 0
+    },
+    {
+      "productId": "prd-flintan-chair",
+      "x": 8.55,
+      "z": 3.88,
+      "ry": 3.1416,
+      "y": 0
+    }
+  ]
+}
