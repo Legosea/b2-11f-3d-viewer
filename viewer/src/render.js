@@ -66,7 +66,8 @@ export function createRenderer(container, {onFirstFrame, onProgress} = {}) {
   // anyway, throwing "Cannot read properties of undefined (reading 'image')" as an uncaught page
   // error. So the real HDR magic bytes ("#?", RADIANCE/RGBE) are checked before ever handing the
   // response to HDRLoader, which keeps that broken code path from running at all.
-  const HDRI_URL = '/hdri/small_empty_room_1_1k.hdr';
+  const PUBLIC_BASE = import.meta.env.BASE_URL || '/';
+  const HDRI_URL = `${PUBLIC_BASE}hdri/small_empty_room_1_1k.hdr`;
   async function looksLikeHdr(url) {
     try {
       const response = await fetch(url);
