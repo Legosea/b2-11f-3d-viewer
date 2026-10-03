@@ -6,7 +6,7 @@ import {createJoystick} from './joystick.js';
 import {createFullscreen} from './fullscreen.js';
 import {LIGHT_DEFAULTS} from './lighting.js';
 import {
-  encodeState, decodeState, loadCurrent, saveCurrent, loadSaved, pushSaved, MAX_SAVED
+  encodeState, decodeState, loadCurrent, saveCurrent, loadSaved, pushSaved, resolveInitialState, MAX_SAVED
 } from './state.js';
 
 const $ = selector => document.querySelector(selector);
@@ -518,7 +518,7 @@ function wireViewPanel() {
   markQuality(viewer.getQuality());
 
   $('#saveCombo').onclick = () => {
-    const saved = pushSaved(snapshot());
+    const saved = pushSaved(caseData.case?.caseId, snapshot());
     renderSaved(saved);
     toast(`${t('saveCombo')} ✓`);
   };
@@ -536,7 +536,7 @@ function wireViewPanel() {
     JSON.stringify(viewer.exportProducts(), null, 2),
     'application/json'
   );
-  renderSaved(loadSaved());
+  renderSaved(loadSaved(caseData.case?.caseId));
 }
 
 function markQuality(level) {
@@ -556,7 +556,7 @@ function renderSaved(saved) {
   $('#savedList').onclick = event => {
     const index = event.target.closest('[data-saved]')?.dataset.saved;
     if (index === undefined) return;
-    applySnapshot(loadSaved()[+index]);
+    applySnapshot(loadSaved(caseData.case?.caseId)[+index]);
   };
 }
 
@@ -604,7 +604,7 @@ function snapshot() {
 function persist() {
   if (!viewer) return;
   clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => saveCurrent(snapshot()), 250);
+  persistTimer = setTimeout(() => saveCurrent(caseData.case?.caseId, snapshot()), 250);
 }
 
 function applySnapshot(record) {
@@ -633,19 +633,13 @@ function applySnapshot(record) {
 }
 
 function restoreState() {
-  // A share hash always wins over browser storage: the link is what the sender meant to show.
-  const shared = decodeState(location.hash);
-  if (shared) {
-    viewer.applyShare(location.hash);
-    applySnapshot({
-      style: shared.styleId, quality: shared.quality, view: shared.view,
-      focus: shared.focus, layout: shared.layout, light: shared.light
-    });
-    toast('link');
-    return;
-  }
-  const current = loadCurrent();
-  if (current) applySnapshot(current);
+  const record = resolveInitialState({
+    hash: location.hash,
+    caseId: caseData.case?.caseId,
+    caseState: caseData.state || {}
+  });
+  applySnapshot(record);
+  if (decodeState(location.hash)) toast('link');
 }
 
 function download(filename, text, type) {
