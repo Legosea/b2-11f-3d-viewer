@@ -4,7 +4,7 @@
     {
       "id": "st-warm-dollhouse",
       "name": "暖白淺橡木 Dollhouse",
-      "summary": "暖白牆、淺橡木地板、低飽和灰米布料、暖木櫃體與深灰窗框，採低角度正交鳥瞰。",
+      "summary": "暖霧白牆、淡天然橡木地板、低飽和灰米布料、柔暖木櫃體與深灰窗框，以乾淨低角度 dollhouse 鳥瞰呈現。",
       "references": [
         "inputs/style/reference-dollhouse.jpg"
       ],
@@ -15,18 +15,18 @@
           "role": "wall"
         },
         {
-          "name": "淺天然橡木",
-          "hex": "#C9A97E",
+          "name": "淡天然橡木",
+          "hex": "#D8C2A3",
           "role": "floor"
         },
         {
-          "name": "暖中木色",
-          "hex": "#9B7454",
+          "name": "柔暖淺木色",
+          "hex": "#B58B6A",
           "role": "wood"
         },
         {
-          "name": "灰米織布",
-          "hex": "#B8B0A6",
+          "name": "灰米淺織布",
+          "hex": "#BFC0BD",
           "role": "fabric"
         },
         {
