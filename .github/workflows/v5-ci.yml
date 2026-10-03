@@ -19,6 +19,8 @@ jobs:
         run: node vendor/interior-design-master/scripts/test-scripts.mjs
       - name: Validate case
         run: node vendor/interior-design-master/scripts/validate-case.mjs case --strict
+      - name: Check product evidence links
+        run: node vendor/interior-design-master/scripts/check-product-links.mjs case
       - name: Install viewer
         run: npm ci
         working-directory: viewer
@@ -31,3 +33,19 @@ jobs:
       - name: Build viewer
         run: npm run build
         working-directory: viewer
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: viewer
+      - name: Browser smoke
+        run: npm run smoke -- --no-build
+        working-directory: viewer
+      - name: Hero luminance guard
+        run: node scripts/check-hero-luminance.mjs output/smoke/desktop-axon.png
+        working-directory: viewer
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b2-v5-smoke-${{ github.sha }}
+          path: viewer/output/smoke/
+          if-no-files-found: warn
