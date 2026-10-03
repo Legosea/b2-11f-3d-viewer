@@ -1,0 +1,969 @@
+{
+  "version": 1,
+  "units": "m",
+  "source": {
+    "files": [
+      "inputs/plan/2024-07-14-Model(1).pdf"
+    ],
+    "coordinateSystem": "x-right-z-down, metres, y up; origin is PDF source point (148.64,119.48)",
+    "scaleStatus": "confirmed",
+    "metresPerPixel": null,
+    "northDeg": null,
+    "reviewOverlay": "output/plan-overlay.svg"
+  },
+  "levels": [
+    {
+      "id": "lvl-11f",
+      "name": "11F B2",
+      "elevation": 0,
+      "ceilingHeight": 3.3
+    }
+  ],
+  "rooms": [
+    {
+      "id": "rm-left-bath",
+      "name": "左側衛浴",
+      "kind": "bath",
+      "status": "confirmed",
+      "connects": [
+        "rm-open-living"
+      ],
+      "boundary": [
+        [
+          0.1499,
+          0.1499
+        ],
+        [
+          3.015,
+          0.1499
+        ],
+        [
+          3.015,
+          1.6637
+        ],
+        [
+          0.1499,
+          1.6637
+        ]
+      ]
+    },
+    {
+      "id": "rm-left-bedroom",
+      "name": "左側房間",
+      "kind": "bedroom",
+      "status": "confirmed",
+      "connects": [
+        "rm-open-living"
+      ],
+      "boundary": [
+        [
+          0.1499,
+          1.7856
+        ],
+        [
+          2.9007,
+          1.7856
+        ],
+        [
+          2.9007,
+          5.1003
+        ],
+        [
+          0.1499,
+          5.1003
+        ]
+      ]
+    },
+    {
+      "id": "rm-open-living",
+      "name": "客餐廳・開放空間",
+      "kind": "living",
+      "status": "confirmed",
+      "connects": [
+        "rm-left-bath",
+        "rm-left-bedroom",
+        "rm-right-bedroom",
+        "rm-balcony"
+      ],
+      "boundary": [
+        [
+          3.1369,
+          0.1499
+        ],
+        [
+          7.8156,
+          0.1499
+        ],
+        [
+          7.8156,
+          4.4501
+        ],
+        [
+          6.1646,
+          4.4501
+        ],
+        [
+          6.1646,
+          5.7988
+        ],
+        [
+          3.236,
+          5.7988
+        ],
+        [
+          3.236,
+          5.1003
+        ],
+        [
+          3.1369,
+          5.1003
+        ]
+      ]
+    },
+    {
+      "id": "rm-right-bedroom",
+      "name": "右側房間",
+      "kind": "bedroom",
+      "status": "confirmed",
+      "connects": [
+        "rm-open-living",
+        "rm-right-bath"
+      ],
+      "boundary": [
+        [
+          7.935,
+          0.1499
+        ],
+        [
+          11.0515,
+          0.1499
+        ],
+        [
+          11.0515,
+          3.5281
+        ],
+        [
+          9.4666,
+          3.5281
+        ],
+        [
+          9.4666,
+          4.4501
+        ],
+        [
+          7.935,
+          4.4501
+        ]
+      ]
+    },
+    {
+      "id": "rm-right-bath",
+      "name": "右側衛浴",
+      "kind": "bath",
+      "status": "confirmed",
+      "connects": [
+        "rm-right-bedroom"
+      ],
+      "boundary": [
+        [
+          9.4666,
+          3.65
+        ],
+        [
+          11.0515,
+          3.65
+        ],
+        [
+          11.0515,
+          5.4483
+        ],
+        [
+          9.2151,
+          5.4483
+        ],
+        [
+          9.2151,
+          4.5999
+        ],
+        [
+          9.4666,
+          4.5999
+        ]
+      ]
+    },
+    {
+      "id": "rm-balcony",
+      "name": "陽台",
+      "kind": "balcony",
+      "status": "confirmed",
+      "connects": [
+        "rm-open-living"
+      ],
+      "boundary": [
+        [
+          6.1646,
+          4.5999
+        ],
+        [
+          9.0957,
+          4.5999
+        ],
+        [
+          9.0957,
+          5.7988
+        ],
+        [
+          6.1646,
+          5.7988
+        ]
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "id": "w-ext-north",
+      "a": [
+        0,
+        0.0749
+      ],
+      "b": [
+        11.2014,
+        0.0749
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-ext-west",
+      "a": [
+        0.0749,
+        0.1499
+      ],
+      "b": [
+        0.0749,
+        5.1003
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-ext-east",
+      "a": [
+        11.1265,
+        0.1499
+      ],
+      "b": [
+        11.1265,
+        5.4483
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-left-bath-south",
+      "a": [
+        0.1499,
+        1.7247
+      ],
+      "b": [
+        3.1369,
+        1.7247
+      ],
+      "thickness": 0.1219,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-left-bath-east",
+      "a": [
+        3.0759,
+        0.1499
+      ],
+      "b": [
+        3.0759,
+        1.7856
+      ],
+      "thickness": 0.1219,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-left-bedroom-north-stub",
+      "a": [
+        1.2675,
+        2.7445
+      ],
+      "b": [
+        3.0201,
+        2.7445
+      ],
+      "thickness": 0.1194,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "inferred"
+    },
+    {
+      "id": "w-left-bedroom-east",
+      "a": [
+        2.9604,
+        2.6848
+      ],
+      "b": [
+        2.9604,
+        5.1003
+      ],
+      "thickness": 0.1194,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-ext-left-bedroom-south",
+      "a": [
+        0,
+        5.1752
+      ],
+      "b": [
+        3.1369,
+        5.1752
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "estimated"
+    },
+    {
+      "id": "w-ext-living-south",
+      "a": [
+        2.987,
+        5.8737
+      ],
+      "b": [
+        6.1646,
+        5.8737
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-balcony-west",
+      "a": [
+        6.0896,
+        4.4501
+      ],
+      "b": [
+        6.0896,
+        5.7988
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-balcony-north",
+      "a": [
+        7.0663,
+        4.525
+      ],
+      "b": [
+        9.6012,
+        4.525
+      ],
+      "thickness": 0.1499,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "estimated"
+    },
+    {
+      "id": "w-balcony-south-parapet",
+      "a": [
+        6.1646,
+        5.7988
+      ],
+      "b": [
+        9.0957,
+        5.7988
+      ],
+      "thickness": 0.12,
+      "height": 1.05,
+      "kind": "parapet",
+      "status": "inferred"
+    },
+    {
+      "id": "w-right-bedroom-west",
+      "a": [
+        7.8753,
+        0.1499
+      ],
+      "b": [
+        7.8753,
+        4.4501
+      ],
+      "thickness": 0.1194,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-right-bath-north",
+      "a": [
+        9.4666,
+        3.589
+      ],
+      "b": [
+        11.0515,
+        3.589
+      ],
+      "thickness": 0.1219,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-right-bath-west",
+      "a": [
+        9.1554,
+        4.5999
+      ],
+      "b": [
+        9.1554,
+        5.4483
+      ],
+      "thickness": 0.1194,
+      "height": 3.3,
+      "kind": "partition",
+      "status": "confirmed"
+    },
+    {
+      "id": "w-right-bath-south",
+      "a": [
+        9.0957,
+        5.4483
+      ],
+      "b": [
+        11.0515,
+        5.4483
+      ],
+      "thickness": 0.12,
+      "height": 3.3,
+      "kind": "solid",
+      "status": "inferred"
+    }
+  ],
+  "openings": [
+    {
+      "id": "op-entry",
+      "type": "door",
+      "a": [
+        3.5865,
+        0.0749
+      ],
+      "b": [
+        4.6863,
+        0.0749
+      ],
+      "sill": 0,
+      "head": 2.4,
+      "swing": -90,
+      "inferred": false,
+      "wall": "w-ext-north",
+      "name": "入口大門"
+    },
+    {
+      "id": "op-door-left-bath",
+      "type": "door",
+      "a": [
+        2.2479,
+        1.7247
+      ],
+      "b": [
+        2.9883,
+        1.7247
+      ],
+      "sill": 0,
+      "head": 2.2,
+      "swing": 90,
+      "inferred": false,
+      "wall": "w-left-bath-south",
+      "name": "左側衛浴門"
+    },
+    {
+      "id": "op-door-left-bedroom",
+      "type": "door",
+      "a": [
+        1.2675,
+        2.7445
+      ],
+      "b": [
+        2.1069,
+        2.7445
+      ],
+      "sill": 0,
+      "head": 2.2,
+      "swing": 90,
+      "inferred": false,
+      "wall": "w-left-bedroom-north-stub",
+      "name": "左房門"
+    },
+    {
+      "id": "op-left-bedroom-exterior",
+      "type": "door",
+      "a": [
+        0.8865,
+        5.1752
+      ],
+      "b": [
+        2.4867,
+        5.1752
+      ],
+      "sill": 0,
+      "head": 2.4,
+      "swing": -90,
+      "inferred": true,
+      "wall": "w-ext-left-bedroom-south",
+      "name": "左房外部開口"
+    },
+    {
+      "id": "op-w3-living",
+      "type": "window",
+      "a": [
+        3.236,
+        5.8737
+      ],
+      "b": [
+        5.916,
+        5.8737
+      ],
+      "sill": 0.5,
+      "head": 2.4,
+      "swing": null,
+      "inferred": false,
+      "wall": "w-ext-living-south",
+      "name": "W3 客廳窗 2680x1900"
+    },
+    {
+      "id": "op-door-balcony",
+      "type": "door",
+      "a": [
+        6.0896,
+        4.5733
+      ],
+      "b": [
+        6.0896,
+        5.4127
+      ],
+      "sill": 0,
+      "head": 2.4,
+      "swing": 90,
+      "inferred": false,
+      "wall": "w-balcony-west",
+      "name": "陽台門"
+    },
+    {
+      "id": "op-balcony-window",
+      "type": "sliding",
+      "a": [
+        7.9451,
+        4.525
+      ],
+      "b": [
+        9.0957,
+        4.525
+      ],
+      "sill": 0.5,
+      "head": 2.4,
+      "swing": null,
+      "inferred": true,
+      "wall": "w-balcony-north",
+      "name": "陽台上方開口"
+    },
+    {
+      "id": "op-door-right-bedroom",
+      "type": "door",
+      "a": [
+        7.8753,
+        0.4788
+      ],
+      "b": [
+        7.8753,
+        1.3183
+      ],
+      "sill": 0,
+      "head": 2.2,
+      "swing": -90,
+      "inferred": false,
+      "wall": "w-right-bedroom-west",
+      "name": "右房門"
+    },
+    {
+      "id": "op-door-right-bath",
+      "type": "door",
+      "a": [
+        9.5771,
+        3.589
+      ],
+      "b": [
+        10.3175,
+        3.589
+      ],
+      "sill": 0,
+      "head": 2.2,
+      "swing": 90,
+      "inferred": false,
+      "wall": "w-right-bath-north",
+      "name": "右側衛浴門"
+    },
+    {
+      "id": "op-right-bath-window",
+      "type": "window",
+      "a": [
+        9.586,
+        5.4483
+      ],
+      "b": [
+        10.4013,
+        5.4483
+      ],
+      "sill": 1.2,
+      "head": 2.3,
+      "swing": null,
+      "inferred": true,
+      "wall": "w-right-bath-south",
+      "name": "右側衛浴窗"
+    }
+  ],
+  "fixedElements": [
+    {
+      "id": "fx-left-bath-shower",
+      "kind": "shower",
+      "room": "rm-left-bath",
+      "status": "inferred",
+      "bounds": {
+        "x": 0.58,
+        "z": 0.92,
+        "width": 0.85,
+        "depth": 1.28,
+        "height": 2.1
+      }
+    },
+    {
+      "id": "fx-left-bath-wc",
+      "kind": "wc",
+      "room": "rm-left-bath",
+      "status": "inferred",
+      "bounds": {
+        "x": 1.72,
+        "z": 0.78,
+        "width": 0.42,
+        "depth": 0.68,
+        "height": 0.78
+      }
+    },
+    {
+      "id": "fx-left-bath-basin",
+      "kind": "basin",
+      "room": "rm-left-bath",
+      "status": "inferred",
+      "bounds": {
+        "x": 2.55,
+        "z": 0.72,
+        "width": 0.65,
+        "depth": 0.5,
+        "height": 0.86
+      }
+    },
+    {
+      "id": "fx-right-bath-basin",
+      "kind": "basin",
+      "room": "rm-right-bath",
+      "status": "inferred",
+      "bounds": {
+        "x": 10.72,
+        "z": 4.2,
+        "width": 0.58,
+        "depth": 0.45,
+        "height": 0.86
+      }
+    },
+    {
+      "id": "fx-right-bath-wc",
+      "kind": "wc",
+      "room": "rm-right-bath",
+      "status": "inferred",
+      "bounds": {
+        "x": 10.55,
+        "z": 5.02,
+        "width": 0.42,
+        "depth": 0.68,
+        "height": 0.78
+      }
+    },
+    {
+      "id": "fx-right-bedroom-wardrobe-west",
+      "kind": "wardrobe",
+      "room": "rm-right-bedroom",
+      "status": "inferred",
+      "bounds": {
+        "x": 8.08,
+        "z": 2.55,
+        "width": 0.55,
+        "depth": 2.25,
+        "height": 2.35
+      }
+    },
+    {
+      "id": "fx-right-bedroom-wardrobe-north",
+      "kind": "wardrobe",
+      "room": "rm-right-bedroom",
+      "status": "inferred",
+      "bounds": {
+        "x": 9.65,
+        "z": 0.39,
+        "width": 2.7,
+        "depth": 0.55,
+        "height": 2.35
+      }
+    },
+    {
+      "id": "fx-left-bedroom-storage",
+      "kind": "wardrobe",
+      "room": "rm-left-bedroom",
+      "status": "inferred",
+      "bounds": {
+        "x": 0.45,
+        "z": 3.55,
+        "width": 0.55,
+        "depth": 2.3,
+        "height": 2.35
+      }
+    },
+    {
+      "id": "fx-open-ref",
+      "kind": "appliance-fridge",
+      "room": "rm-open-living",
+      "status": "inferred",
+      "bounds": {
+        "x": 7.52,
+        "z": 1.75,
+        "width": 0.65,
+        "depth": 0.7,
+        "height": 1.83
+      }
+    },
+    {
+      "id": "fx-column-left-lower",
+      "kind": "column",
+      "room": "rm-left-bedroom",
+      "status": "confirmed",
+      "bounds": {
+        "x": 0.4001,
+        "z": 5.9487,
+        "width": 0.8001,
+        "depth": 1.0008,
+        "height": 3.3
+      }
+    },
+    {
+      "id": "fx-column-mid-left",
+      "kind": "column",
+      "room": "rm-open-living",
+      "status": "confirmed",
+      "bounds": {
+        "x": 3.1115,
+        "z": 6.2484,
+        "width": 0.2489,
+        "depth": 0.5994,
+        "height": 3.3
+      }
+    },
+    {
+      "id": "fx-column-mid-right",
+      "kind": "column",
+      "room": "rm-balcony",
+      "status": "confirmed",
+      "bounds": {
+        "x": 6.0402,
+        "z": 6.2484,
+        "width": 0.2489,
+        "depth": 0.5994,
+        "height": 3.3
+      }
+    },
+    {
+      "id": "fx-shaft-right-balcony",
+      "kind": "shaft",
+      "room": "rm-right-bath",
+      "status": "confirmed",
+      "bounds": {
+        "x": 9.2202,
+        "z": 5.8731,
+        "width": 0.2489,
+        "depth": 0.95,
+        "height": 3.3
+      }
+    },
+    {
+      "id": "fx-column-right-lower",
+      "kind": "column",
+      "room": "rm-right-bath",
+      "status": "confirmed",
+      "bounds": {
+        "x": 10.8014,
+        "z": 5.9487,
+        "width": 0.8001,
+        "depth": 1.0008,
+        "height": 3.3
+      }
+    }
+  ],
+  "routes": [
+    {
+      "id": "rt-entry-open",
+      "status": "confirmed",
+      "width": 0.9,
+      "points": [
+        [
+          4.14,
+          0.25
+        ],
+        [
+          4.2,
+          1.3
+        ],
+        [
+          4.6,
+          2.6
+        ],
+        [
+          4.7,
+          4
+        ]
+      ]
+    },
+    {
+      "id": "rt-open-left-bedroom",
+      "status": "inferred",
+      "width": 0.8,
+      "points": [
+        [
+          3.2,
+          2.4
+        ],
+        [
+          2.4,
+          2.4
+        ],
+        [
+          1.9,
+          3.2
+        ]
+      ]
+    },
+    {
+      "id": "rt-open-right-bedroom",
+      "status": "confirmed",
+      "width": 0.8,
+      "points": [
+        [
+          7.5,
+          1.5
+        ],
+        [
+          7.9,
+          1
+        ],
+        [
+          8.6,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "rt-right-bedroom-bath",
+      "status": "confirmed",
+      "width": 0.75,
+      "points": [
+        [
+          9.8,
+          3.1
+        ],
+        [
+          10,
+          3.7
+        ],
+        [
+          10.3,
+          4.2
+        ]
+      ]
+    },
+    {
+      "id": "rt-open-balcony",
+      "status": "confirmed",
+      "width": 0.8,
+      "points": [
+        [
+          5.8,
+          4.2
+        ],
+        [
+          6.1,
+          4.8
+        ],
+        [
+          7.2,
+          5.1
+        ]
+      ]
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "as-scale",
+      "statement": "The printed 1/60 scale converts 126.60 PDF points at W3 to 2.6797 m, agreeing with the user-confirmed 2.680 m width within 0.3 mm.",
+      "status": "confirmed",
+      "basis": "PDF vector coordinates + user W3 width"
+    },
+    {
+      "id": "as-wall-thickness",
+      "statement": "Gray-filled structural/partition bands in the PDF are treated as wall thickness evidence; 7.08 pt bands resolve to about 150 mm and 5.64/5.76 pt bands to about 120 mm.",
+      "status": "confirmed",
+      "basis": "PDF vector fills at 1/60"
+    },
+    {
+      "id": "as-w3-height",
+      "statement": "W3 height 1900 mm and sill 500 mm are user-confirmed; therefore head is 2400 mm AFF.",
+      "status": "confirmed",
+      "basis": "user supplied elevation"
+    },
+    {
+      "id": "as-secondary-openings",
+      "statement": "Non-W3 opening head heights and the exact type of the left exterior and balcony secondary glazing are inferred where the floor plan has no elevation dimension.",
+      "status": "inferred",
+      "basis": "floor-plan symbols only"
+    },
+    {
+      "id": "as-room-polygons",
+      "statement": "Room polygons are review/navigation regions bounded by the source wall system; irregular door recesses are simplified where they do not change wall geometry.",
+      "status": "inferred",
+      "basis": "viewer floor/label semantics"
+    },
+    {
+      "id": "as-north",
+      "statement": "True north is not supplied; solar orientation remains illustrative.",
+      "status": "unknown",
+      "basis": "no site north data"
+    }
+  ]
+}

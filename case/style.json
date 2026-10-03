@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "styles": [
+    {
+      "id": "st-warm-dollhouse",
+      "name": "暖白淺橡木 Dollhouse",
+      "summary": "暖白牆、淺橡木地板、低飽和灰米布料、暖木櫃體與深灰窗框，採低角度正交鳥瞰。",
+      "references": [
+        "inputs/style/reference-dollhouse.jpg"
+      ],
+      "palette": [
+        {
+          "name": "暖霧白",
+          "hex": "#E7E0D6",
+          "role": "wall"
+        },
+        {
+          "name": "淺天然橡木",
+          "hex": "#C9A97E",
+          "role": "floor"
+        },
+        {
+          "name": "暖中木色",
+          "hex": "#9B7454",
+          "role": "wood"
+        },
+        {
+          "name": "灰米織布",
+          "hex": "#B8B0A6",
+          "role": "fabric"
+        },
+        {
+          "name": "炭灰框材",
+          "hex": "#46484B",
+          "role": "frame"
+        },
+        {
+          "name": "霧鼠尾草綠",
+          "hex": "#788273",
+          "role": "accent"
+        }
+      ],
+      "materials": [
+        {
+          "surface": "wall",
+          "description": "暖灰米白霧面乳膠漆；避免純白與高亮反射。",
+          "status": "inferred"
+        },
+        {
+          "surface": "floor",
+          "description": "淺色自然橡木直鋪，低反射。",
+          "status": "inferred"
+        },
+        {
+          "surface": "cabinetry",
+          "description": "暖中木色霧面木皮。",
+          "status": "inferred"
+        },
+        {
+          "surface": "upholstery",
+          "description": "灰米低飽和織布。",
+          "status": "inferred"
+        },
+        {
+          "surface": "window-frame",
+          "description": "深灰金屬窗框。",
+          "status": "inferred"
+        }
+      ],
+      "lighting": {
+        "description": "中性偏暖日光、柔和陰影；背景淡暖灰，避免高光剪裁。",
+        "azimuthDeg": null,
+        "elevationDeg": null,
+        "status": "inferred"
+      },
+      "rules": [
+        "Fixed architecture / 固定建築層不可因家具或展示構圖而改動。",
+        "主要動線維持至少約 0.8 m，門扇與 W3 窗前不得堆放家具。",
+        "牆面與衛浴不得使用亮面純白 showroom 材質。",
+        "家具密度維持低至中等。",
+        "預設使用較低視點的正交 dollhouse 鳥瞰。"
+      ],
+      "furnitureRoles": [
+        {
+          "id": "fr-sofa",
+          "role": "sofa",
+          "room": "rm-open-living",
+          "required": true,
+          "maxWidth": 2.5,
+          "maxDepth": 1.05,
+          "clearance": 0.8
+        },
+        {
+          "id": "fr-coffee",
+          "role": "coffee table",
+          "room": "rm-open-living",
+          "required": false,
+          "maxWidth": 1.2,
+          "maxDepth": 0.7,
+          "clearance": 0.4
+        },
+        {
+          "id": "fr-dining-table",
+          "role": "dining table",
+          "room": "rm-open-living",
+          "required": true,
+          "maxWidth": 1.6,
+          "maxDepth": 0.9,
+          "clearance": 0.75
+        },
+        {
+          "id": "fr-dining-chair",
+          "role": "dining chair",
+          "room": "rm-open-living",
+          "required": true,
+          "maxWidth": 0.55,
+          "maxDepth": 0.6,
+          "clearance": 0.4
+        },
+        {
+          "id": "fr-tv-console",
+          "role": "tv console",
+          "room": "rm-open-living",
+          "required": false,
+          "maxWidth": 1.8,
+          "maxDepth": 0.45,
+          "clearance": 0.7
+        },
+        {
+          "id": "fr-left-bed",
+          "role": "bed single",
+          "room": "rm-left-bedroom",
+          "required": true,
+          "maxWidth": 1.25,
+          "maxDepth": 2.1,
+          "clearance": 0.55
+        },
+        {
+          "id": "fr-left-desk",
+          "role": "desk",
+          "room": "rm-left-bedroom",
+          "required": false,
+          "maxWidth": 1.2,
+          "maxDepth": 0.6,
+          "clearance": 0.65
+        },
+        {
+          "id": "fr-left-chair",
+          "role": "desk chair",
+          "room": "rm-left-bedroom",
+          "required": false,
+          "maxWidth": 0.75,
+          "maxDepth": 0.75,
+          "clearance": 0.55
+        },
+        {
+          "id": "fr-right-bed",
+          "role": "bed double",
+          "room": "rm-right-bedroom",
+          "required": true,
+          "maxWidth": 1.8,
+          "maxDepth": 2.15,
+          "clearance": 0.55
+        },
+        {
+          "id": "fr-right-desk",
+          "role": "desk",
+          "room": "rm-right-bedroom",
+          "required": false,
+          "maxWidth": 1.2,
+          "maxDepth": 0.6,
+          "clearance": 0.65
+        },
+        {
+          "id": "fr-right-chair",
+          "role": "desk chair",
+          "room": "rm-right-bedroom",
+          "required": false,
+          "maxWidth": 0.75,
+          "maxDepth": 0.75,
+          "clearance": 0.55
+        },
+        {
+          "id": "fr-bedside",
+          "role": "bedside table",
+          "room": "rm-right-bedroom",
+          "required": false,
+          "maxWidth": 0.5,
+          "maxDepth": 0.5,
+          "clearance": 0.3
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sourceUnits": "PDF points",
+  "scaleClaim": "1/60 (visually confirmed in title block)",
+  "metresPerSourceUnit": 0.021166666666666667,
+  "originSource": [
+    148.64,
+    119.48
+  ],
+  "status": "confirmed",
+  "w3Calibration": {
+    "sourceStart": [
+      301.52,
+      393.44
+    ],
+    "sourceEnd": [
+      428.12,
+      393.44
+    ],
+    "sourceWidthPoints": 126.6,
+    "measuredWidthM": 2.6797,
+    "targetWidthM": 2.68,
+    "differenceM": -0.0003,
+    "status": "confirmed"
+  }
+}

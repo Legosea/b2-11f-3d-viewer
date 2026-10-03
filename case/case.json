@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "caseId": "b2-11f",
+  "displayName": "B2-11F",
+  "locale": "zh-TW",
+  "region": "TW",
+  "productResearch": {
+    "required": true,
+    "currency": "TWD"
+  },
+  "stage": "viewer",
+  "inputs": {
+    "plan": [
+      "case/inputs/plan/2024-07-14-Model(1).pdf"
+    ],
+    "style": [
+      "inputs/style/reference-dollhouse.jpg"
+    ],
+    "products": [
+      "furniture-products.json"
+    ],
+    "measurements": [
+      "floor-height-3300mm",
+      "W3-2680x1900mm-sill500mm"
+    ]
+  },
+  "notes": [
+    "Architecture is reconstructed from the B2-11F PDF vector plan. v1-v4 viewer coordinates are not architectural evidence."
+  ]
+}
