@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
@@ -42,7 +43,7 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xe2ddd4);
+  scene.background = new THREE.Color(0xe9e5de);
 
   // Perspective projection reads more like a real architectural photograph
   // than the previous orthographic / dollhouse view.
@@ -57,15 +58,16 @@ function initThree() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.95;
+  renderer.toneMappingExposure = 1.08;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xe2ddd4, 1);
+  renderer.setClearColor(0xe9e5de, 1);
   viewport.appendChild(renderer.domElement);
 
   // No SSAO / post-processing and no bright HDR room environment:
   // this is intentionally the stable iPhone/Safari path.
   scene.environment = null;
+  RectAreaLightUniformsLib.init();
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -78,11 +80,11 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * 0.49;
 
   // Soft sky light. Kept deliberately low so wall/floor corners retain depth.
-  scene.add(new THREE.HemisphereLight(0xf8fbff, 0x9e9589, 0.42));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.035));
+  scene.add(new THREE.HemisphereLight(0xf8fbff, 0xb7afa4, 0.78));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.10));
 
   // Direct sun; its actual position is set after the model bounds are known.
-  sunLight = new THREE.DirectionalLight(0xffdfae, 1.85);
+  sunLight = new THREE.DirectionalLight(0xffe4bb, 2.05);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 3;
@@ -92,7 +94,7 @@ function initThree() {
   scene.add(sunLight.target);
 
   // Weak cool sky bounce from the opposite side.
-  const skyBounce = new THREE.DirectionalLight(0xd9e4f0, 0.14);
+  const skyBounce = new THREE.DirectionalLight(0xd9e4f0, 0.26);
   skyBounce.position.set(7, 6, -9);
   scene.add(skyBounce);
 
@@ -435,13 +437,13 @@ function stylePhotorealMaterial(material, mesh) {
     if (name.includes('000__wood__matte')) {
       ensurePlanarUV(mesh.geometry, 0.66);
       material.map = nordicWoodTexture;
-      material.color.setHex(0xc9a879);
+      material.color.setHex(0xd1ae7b);
     }
   } else if (name.includes('瓷砖 47')) {
-    setColor(0xbdb7af);
+    setColor(0xd6d0c8);
     material.roughness = 0.92;
   } else if (name.includes('瓷砖')) {
-    setColor(0xcec8bf);
+    setColor(0xe0dad2);
     material.roughness = 0.88;
   } else if (
     name.includes('color m07') ||
@@ -452,10 +454,10 @@ function stylePhotorealMaterial(material, mesh) {
     setColor(0x404442);
     material.roughness = 0.62;
   } else if (name.includes('plastic') || name.includes('塑料')) {
-    setColor(0xd1cbc2);
+    setColor(0xddd7cf);
     material.roughness = 0.78;
   } else {
-    setColor(0xd2ccc4);
+    setColor(0xe5dfd7);
     material.metalness = 0;
     material.roughness = 0.9;
   }
@@ -504,70 +506,58 @@ function kelvinToColor(kelvin) {
   return new THREE.Color(clamp(r), clamp(g), clamp(b));
 }
 
-function addDownlight({
+function addCeilingAreaLight({
+  x,
+  z,
+  ceilingY,
+  targetY,
+  width,
+  depth,
+  kelvin = 3000,
+  intensity = 5
+}) {
+  const light = new THREE.RectAreaLight(
+    kelvinToColor(kelvin),
+    intensity,
+    width,
+    depth
+  );
+
+  light.position.set(x, ceilingY, z);
+  light.lookAt(x, targetY, z);
+  interiorLightRoot.add(light);
+  return light;
+}
+
+function addSoftDownlight({
   x,
   z,
   ceilingY,
   targetY,
   kelvin = 3000,
-  intensity = 20,
-  distance = 4.4,
-  angleDeg = 60,
-  penumbra = 0.88,
-  tiltX = 0,
-  tiltZ = 0
+  intensity = 4.5,
+  distance = 3.6,
+  angleDeg = 72
 }) {
   const light = new THREE.SpotLight(
     kelvinToColor(kelvin),
     intensity,
     distance,
     THREE.MathUtils.degToRad(angleDeg),
-    penumbra,
+    1.0,
     2
   );
 
-  // The fixture is conceptually recessed into the hidden ceiling plane.
-  // No ceiling mesh and no visible fixture geometry are drawn.
   light.position.set(x, ceilingY, z);
   light.castShadow = false;
 
   const target = new THREE.Object3D();
-  target.position.set(x + tiltX, targetY, z + tiltZ);
+  target.position.set(x, targetY, z);
   interiorLightRoot.add(target);
-
   light.target = target;
   interiorLightRoot.add(light);
-  return light;
-}
 
-function addLinearDownlights({
-  x1,
-  z1,
-  x2,
-  z2,
-  count = 3,
-  ceilingY,
-  targetY,
-  kelvin = 3000,
-  intensity = 16,
-  distance = 4.2,
-  angleDeg = 58,
-  penumbra = 0.90
-}) {
-  for (let i = 0; i < count; i++) {
-    const t = count === 1 ? 0.5 : i / (count - 1);
-    addDownlight({
-      x: THREE.MathUtils.lerp(x1, x2, t),
-      z: THREE.MathUtils.lerp(z1, z2, t),
-      ceilingY,
-      targetY,
-      kelvin,
-      intensity,
-      distance,
-      angleDeg,
-      penumbra
-    });
-  }
+  return light;
 }
 
 function setupInteriorLighting(box) {
@@ -575,126 +565,105 @@ function setupInteriorLighting(box) {
     interiorLightRoot.remove(interiorLightRoot.children[0]);
   }
 
-  // Use the actual top of the architectural model as the hidden ceiling plane.
-  // Keep the source slightly below it to avoid z-fighting with any residual top edges.
-  const ceilingY = box.max.y - 0.08;
+  const ceilingY = box.max.y - 0.10;
   const floorY = box.min.y;
-  const targetY = floorY + 0.78;
+  const targetY = floorY + 0.85;
 
   // ------------------------------------------------------------
-  // Residential ceiling lighting plan
+  // Hidden ceiling lighting concept
   // ------------------------------------------------------------
+  // The ceiling itself is intentionally not rendered. Instead, broad
+  // RectAreaLights occupy the room centres and behave like reflected
+  // ceiling light / diffuse recessed lighting. This avoids the theatrical
+  // scallops that narrow SpotLights produced on the walls.
 
-  // Living room:
-  // 4 broad-beam downlights arranged around the seating zone rather than
-  // one bright source in the centre. 3000K gives a warm but not yellow room.
-  [
-    [3.95, -4.95],
-    [5.35, -4.95],
-    [3.95, -3.55],
-    [5.35, -3.55]
-  ].forEach(([x, z]) => addDownlight({
-    x, z, ceilingY, targetY,
+  // Living room: broad warm ceiling field.
+  addCeilingAreaLight({
+    x: 4.65, z: -4.25,
+    ceilingY, targetY,
+    width: 2.85, depth: 2.35,
     kelvin: 3000,
-    intensity: 18,
-    distance: 4.5,
-    angleDeg: 62,
-    penumbra: 0.92
-  }));
-
-  // Dining zone:
-  // two focused but soft downlights aligned with the dining-table axis.
-  addLinearDownlights({
-    x1: 6.15, z1: -4.45,
-    x2: 7.10, z2: -4.45,
-    count: 2,
-    ceilingY,
-    targetY: floorY + 0.76,
-    kelvin: 3000,
-    intensity: 19,
-    distance: 4.0,
-    angleDeg: 50,
-    penumbra: 0.88
+    intensity: 6.2
   });
 
-  // Kitchen / work surface:
-  // slightly cooler light for visual accuracy on the worktop.
-  addLinearDownlights({
-    x1: 6.60, z1: -2.95,
-    x2: 7.55, z2: -2.95,
-    count: 2,
-    ceilingY,
-    targetY: floorY + 0.90,
+  // Dining zone.
+  addCeilingAreaLight({
+    x: 6.62, z: -4.42,
+    ceilingY, targetY: floorY + 0.82,
+    width: 1.55, depth: 1.25,
+    kelvin: 3000,
+    intensity: 5.3
+  });
+
+  // Kitchen / work zone: a little more neutral and brighter.
+  addCeilingAreaLight({
+    x: 7.05, z: -2.92,
+    ceilingY, targetY: floorY + 0.95,
+    width: 1.55, depth: 1.05,
     kelvin: 3500,
-    intensity: 20,
-    distance: 3.8,
-    angleDeg: 48,
-    penumbra: 0.86
+    intensity: 6.2
   });
 
-  // Left bedroom:
-  // two low-glare warm downlights, kept away from a single harsh centre point.
-  addLinearDownlights({
-    x1: 1.10, z1: -3.15,
-    x2: 2.20, z2: -3.15,
-    count: 2,
-    ceilingY,
-    targetY,
-    kelvin: 2800,
-    intensity: 13,
-    distance: 3.7,
-    angleDeg: 58,
-    penumbra: 0.93
+  // Left bedroom.
+  addCeilingAreaLight({
+    x: 1.63, z: -3.10,
+    ceilingY, targetY,
+    width: 1.85, depth: 1.65,
+    kelvin: 2900,
+    intensity: 4.4
   });
 
   // Right bedroom.
-  addLinearDownlights({
-    x1: 8.95, z1: -4.45,
-    x2: 10.05, z2: -4.45,
-    count: 2,
-    ceilingY,
-    targetY,
-    kelvin: 2800,
-    intensity: 13,
-    distance: 3.7,
-    angleDeg: 58,
-    penumbra: 0.93
+  addCeilingAreaLight({
+    x: 9.45, z: -4.38,
+    ceilingY, targetY,
+    width: 1.85, depth: 1.65,
+    kelvin: 2900,
+    intensity: 4.4
   });
 
-  // Corridor / entrance:
-  // two smaller beams create a continuous circulation path.
-  addLinearDownlights({
-    x1: 5.55, z1: -1.75,
-    x2: 6.45, z2: -1.75,
-    count: 2,
-    ceilingY,
-    targetY,
+  // Corridor / entrance.
+  addCeilingAreaLight({
+    x: 5.95, z: -1.78,
+    ceilingY, targetY,
+    width: 1.35, depth: 0.72,
     kelvin: 3000,
-    intensity: 10,
-    distance: 3.0,
-    angleDeg: 44,
-    penumbra: 0.90
+    intensity: 3.5
   });
 
-  // Bathroom / utility:
-  // 3500K for neutral skin/material rendering without going cold-blue.
-  addLinearDownlights({
-    x1: 8.80, z1: -1.55,
-    x2: 9.55, z2: -1.55,
-    count: 2,
-    ceilingY,
-    targetY: floorY + 1.00,
+  // Bathroom / utility.
+  addCeilingAreaLight({
+    x: 9.12, z: -1.52,
+    ceilingY, targetY: floorY + 1.00,
+    width: 1.20, depth: 0.95,
     kelvin: 3500,
-    intensity: 14,
-    distance: 3.0,
-    angleDeg: 44,
-    penumbra: 0.88
+    intensity: 4.7
   });
 
-  // Minimal warm bounce only. It prevents dead-black corners while preserving
-  // both the NW afternoon daylight direction and the ceiling-light modelling.
+  // A very small number of broad, weak downlights are used only to add
+  // vertical modelling. They are deliberately kept away from walls so
+  // there are no isolated bright circles.
+  addSoftDownlight({
+    x: 4.65, z: -4.18,
+    ceilingY, targetY,
+    kelvin: 3000,
+    intensity: 3.6,
+    distance: 3.8,
+    angleDeg: 76
+  });
+
+  addSoftDownlight({
+    x: 6.75, z: -3.72,
+    ceilingY, targetY,
+    kelvin: 3200,
+    intensity: 3.0,
+    distance: 3.5,
+    angleDeg: 78
+  });
+
+  // Soft warm interreflection so the room does not collapse into dark corners.
   interiorLightRoot.add(
-    new THREE.HemisphereLight(0xffedd8, 0x716960, 0.10)
+    new THREE.HemisphereLight(0xfff0df, 0x9a9287, 0.24)
   );
 }
 
@@ -843,7 +812,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-ceiling-lighting-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-soft-ceiling-lighting-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -895,7 +864,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · 空屋擬真 · 西北向午後日照 + 隱藏天花板燈光配置');
+    setStatus('1004 · 空屋擬真 · 西北向午後日照 + 柔和隱藏天花板照明');
     fitCamera();
   } catch (error) {
     console.error(error);
