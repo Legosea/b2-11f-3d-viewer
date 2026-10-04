@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
@@ -38,7 +39,7 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xe4ded4);
+  scene.background = new THREE.Color(0xded8cf);
 
   camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.01, 500);
   camera.position.set(10, 9, 10);
@@ -48,16 +49,20 @@ function initThree() {
     powerPreference: 'high-performance',
     alpha: false
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 0.92;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.72;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xe4ded4, 1);
+  renderer.setClearColor(0xded8cf, 1);
   viewport.appendChild(renderer.domElement);
 
-  scene.environment = null;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const roomEnvironment = new RoomEnvironment();
+  scene.environment = pmrem.fromScene(roomEnvironment, 0.05).texture;
+  roomEnvironment.dispose();
+  pmrem.dispose();
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -72,20 +77,20 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.target.set(5, 1, -3);
 
-  scene.add(new THREE.HemisphereLight(0xfff7e8, 0xb4aca1, 0.95));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.11));
+  scene.add(new THREE.HemisphereLight(0xfff8ec, 0xa69d92, 0.82));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.055));
 
-  sunLight = new THREE.DirectionalLight(0xffedcc, 2.05);
+  sunLight = new THREE.DirectionalLight(0xffedc8, 1.55);
   sunLight.position.set(10, 16, 9);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
-  sunLight.shadow.radius = 3;
+  sunLight.shadow.radius = 5;
   sunLight.shadow.bias = -0.00008;
   sunLight.target.position.set(5, 0, -3);
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xdbe4ee, 0.22);
+  const fill = new THREE.DirectionalLight(0xdfe8f2, 0.16);
   fill.position.set(-8, 7, -10);
   scene.add(fill);
 
@@ -384,37 +389,7 @@ function ensurePlanarUV(geometry, scale = 0.7) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
-function classifyArchitectureMesh(mesh) {
-  mesh.geometry?.computeBoundingBox();
-  const local = mesh.geometry?.boundingBox;
-  if (!local) return 'other';
-
-  mesh.updateWorldMatrix(true, false);
-  const box = local.clone().applyMatrix4(mesh.matrixWorld);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const footprint = Math.max(size.x * size.z, 0);
-
-  // Large thin horizontal surfaces close to the lowest architectural level
-  // are treated as floor slabs. This avoids relying on inconsistent SKP
-  // material names after conversion.
-  if (
-    size.y < 0.22 &&
-    footprint > 1.0 &&
-    center.y < 0.65
-  ) {
-    return 'floor';
-  }
-
-  // Tall broad surfaces are primarily walls.
-  if (size.y > 1.4 && Math.max(size.x, size.z) > 0.7) {
-    return 'wall';
-  }
-
-  return 'other';
-}
-
-function styleNordicMaterial(material, mesh, architectureClass = 'other') {
+function styleNordicMaterial(material, mesh) {
   if (!material) return;
 
   const name = (material.name || '').toLowerCase();
@@ -423,27 +398,15 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
   material.metalness = 0.02;
   material.roughness = 0.82;
 
-  if (architectureClass === 'floor') {
-    setColor(0xc0905c);
-    material.metalness = 0;
-    material.roughness = 0.88;
-    ensurePlanarUV(mesh.geometry, 0.78);
-    material.map = nordicWoodTexture;
-    nordicWoodTexture.repeat.set(1.25, 1.25);
-  } else if (architectureClass === 'wall') {
-    setColor(0xd8d1c7);
-    material.metalness = 0;
-    material.roughness = 0.94;
-    material.map = null;
-  } else if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
-    setColor(0xc9d6d3);
+  if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
+    setColor(0xbecbc8);
     material.transparent = true;
     material.opacity = name.includes('railing') ? 0.36 : 0.30;
     material.roughness = 0.18;
     material.metalness = 0;
     material.depthWrite = false;
   } else if (name.includes('glass railing color')) {
-    setColor(0x8b9693);
+    setColor(0x77827f);
     material.roughness = 0.42;
     material.metalness = 0.34;
   } else if (
@@ -453,7 +416,7 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
     name.includes('steel') ||
     name.includes('shower')
   ) {
-    setColor(0x4f5452);
+    setColor(0x454a48);
     material.metalness = 0.52;
     material.roughness = 0.36;
   } else if (
@@ -463,20 +426,20 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
     name.includes('1014065') ||
     name.includes('1620856')
   ) {
-    setColor(0xc79d69);
+    setColor(0xbc8d58);
     material.metalness = 0;
     material.roughness = 0.78;
 
     if (name.includes('000__wood__matte')) {
       ensurePlanarUV(mesh.geometry, 0.66);
       material.map = nordicWoodTexture;
-      material.color.setHex(0xdfc7a0);
+      material.color.setHex(0xd2b181);
     }
   } else if (name.includes('瓷砖 47')) {
-    setColor(0xcfc8be);
+    setColor(0xc4bdb4);
     material.roughness = 0.92;
   } else if (name.includes('瓷砖')) {
-    setColor(0xddd7cf);
+    setColor(0xd1cbc2);
     material.roughness = 0.88;
   } else if (
     name.includes('color m07') ||
@@ -487,20 +450,21 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
     setColor(0x404442);
     material.roughness = 0.62;
   } else if (name.includes('plastic') || name.includes('塑料')) {
-    setColor(0xe1dbd2);
+    setColor(0xd5cec5);
     material.roughness = 0.78;
   } else {
-    setColor(0xd0c7bc);
+    setColor(0xd8d1c8);
     material.metalness = 0;
     material.roughness = 0.9;
   }
 
+  if ('envMapIntensity' in material) material.envMapIntensity = 0.28;
   material.side = THREE.DoubleSide;
   material.needsUpdate = true;
 }
 
 function applyNordicStyle(root) {
-  root.updateMatrixWorld(true);
+  const styled = new Set();
 
   root.traverse(obj => {
     if (!obj.isMesh) return;
@@ -508,16 +472,15 @@ function applyNordicStyle(root) {
     obj.castShadow = true;
     obj.receiveShadow = true;
 
-    const architectureClass = classifyArchitectureMesh(obj);
-    const originals = Array.isArray(obj.material) ? obj.material : [obj.material];
-    const cloned = originals.map(mat => {
-      if (!mat) return mat;
-      const copy = mat.clone();
-      styleNordicMaterial(copy, obj, architectureClass);
-      return copy;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    mats.filter(Boolean).forEach(mat => {
+      if (!styled.has(mat.uuid)) {
+        styleNordicMaterial(mat, obj);
+        styled.add(mat.uuid);
+      } else if ((mat.name || '').toLowerCase().includes('000__wood__matte')) {
+        ensurePlanarUV(obj.geometry, 0.66);
+      }
     });
-
-    obj.material = Array.isArray(obj.material) ? cloned : cloned[0];
   });
 }
 
@@ -690,7 +653,7 @@ function updatePresentationGround(box) {
     new THREE.ShadowMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.22
+      opacity: 0.18
     })
   );
   shadow.rotation.x = -Math.PI / 2;
