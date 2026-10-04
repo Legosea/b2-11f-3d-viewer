@@ -23,6 +23,10 @@ const WASHER_DEFAULT_STATE = Object.freeze({
   rotationY: 0
 });
 
+const ROOM_ANGLE_SNAP_STEP = THREE.MathUtils.degToRad(90);
+const ROOM_ANGLE_MAGNET_THRESHOLD = THREE.MathUtils.degToRad(8);
+const ROOM_ANGLE_RELEASE_THRESHOLD = THREE.MathUtils.degToRad(15);
+
 const viewport = document.getElementById('viewport');
 const fileInput = document.getElementById('fileInput');
 const welcomeFileInput = document.getElementById('welcomeFileInput');
@@ -132,26 +136,35 @@ function initThree() {
   transformControls = new TransformControls(camera, renderer.domElement);
   transformControls.setSize(0.78);
   transformControls.setTranslationSnap(0.01);
-  transformControls.setRotationSnap(THREE.MathUtils.degToRad(1));
+  transformControls.setRotationSnap(null);
   transformControls.addEventListener('dragging-changed', event => {
     controls.enabled = !event.value;
   });
   transformControls.addEventListener('objectChange', () => {
     if (!selectedEditable) return;
+
     selectedEditable.position.y = selectedEditable.userData.floorY ?? 0;
+
     if (editableMode === 'rotate') {
       selectedEditable.rotation.x = 0;
       selectedEditable.rotation.z = 0;
+      applyRoomAngleMagnet(selectedEditable, false);
     }
 
     clearTimeout(washerSaveTimer);
     washerSaveTimer = setTimeout(() => {
-      saveWasherState(selectedEditable);
+      saveEditableState(selectedEditable);
     }, 160);
   });
 
   transformControls.addEventListener('mouseUp', () => {
-    if (selectedEditable) saveWasherState(selectedEditable);
+    if (!selectedEditable) return;
+
+    if (editableMode === 'rotate') {
+      applyRoomAngleMagnet(selectedEditable, true);
+    }
+
+    saveEditableState(selectedEditable);
   });
   scene.add(transformControls.getHelper());
 
@@ -192,7 +205,21 @@ function bindUI() {
       return;
     }
 
-    const washer = restoreOrCreateWasher();
+    const saved = readSavedWasherState();
+    const washer = createPanasonicWasher();
+
+    // If the object had previously been deleted, explicitly adding it again
+    // restores its last remembered transform instead of losing that placement.
+    if (saved) {
+      applyWasherState(washer, {
+        ...saved,
+        exists: true
+      });
+    } else {
+      placeWasherAtBalcony(washer);
+    }
+
+    editableRoot.add(washer);
     saveWasherState(washer);
     selectEditable(washer);
   });
@@ -564,6 +591,54 @@ function applyPhotorealStyle(root) {
   });
 }
 
+function normalizeRadians(angle) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
+function getNearestRoomAngle(angle, offset = 0) {
+  const local = normalizeRadians(angle - offset);
+  const snappedLocal = Math.round(local / ROOM_ANGLE_SNAP_STEP) * ROOM_ANGLE_SNAP_STEP;
+  return normalizeRadians(snappedLocal + offset);
+}
+
+function getAngularDistance(a, b) {
+  return Math.abs(normalizeRadians(a - b));
+}
+
+function applyRoomAngleMagnet(object, onRelease = false) {
+  if (!object) return false;
+
+  // Objects can override their modelling-axis offset later if imported assets
+  // do not use +Z as their visual front.
+  const offset = Number(object.userData?.snapAngleOffset) || 0;
+  const current = normalizeRadians(object.rotation.y);
+  const nearest = getNearestRoomAngle(current, offset);
+  const threshold = onRelease
+    ? ROOM_ANGLE_RELEASE_THRESHOLD
+    : ROOM_ANGLE_MAGNET_THRESHOLD;
+
+  if (getAngularDistance(current, nearest) <= threshold) {
+    object.rotation.y = nearest;
+    object.userData.angleSnapped = true;
+    return true;
+  }
+
+  object.userData.angleSnapped = false;
+  return false;
+}
+
+function saveEditableState(object) {
+  if (!object) return false;
+
+  // The current project only has a persisted washer. Keeping this dispatcher
+  // generic means future furniture/appliances can plug in their own storage.
+  if (object.userData?.label === 'Panasonic NA-V170RPH-K') {
+    return saveWasherState(object);
+  }
+
+  return false;
+}
+
 function readSavedWasherState() {
   try {
     const raw = localStorage.getItem(WASHER_STORAGE_KEY);
@@ -672,6 +747,7 @@ function createPanasonicWasher() {
   group.userData.label = 'Panasonic NA-V170RPH-K';
   group.userData.productSize = { width, depth, height };
   group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
 
   const bodyMat = new THREE.MeshPhysicalMaterial({
     color: 0x171819,
@@ -817,6 +893,7 @@ function setEditableMode(mode) {
     transformControls.showX = false;
     transformControls.showY = true;
     transformControls.showZ = false;
+    setStatus('旋轉模式 · 接近空間正角度時會自動磁吸');
   }
 
   moveObjectBtn?.classList.toggle('active', mode === 'translate');
@@ -830,7 +907,7 @@ function selectEditable(object) {
     transformControls.attach(object);
     setEditableMode(editableMode);
     objectToolbar?.classList.remove('hidden');
-    setStatus('已選取 Panasonic NA-V170RPH-K · 可移動 / 旋轉 / 刪除');
+    setStatus('已選取 Panasonic NA-V170RPH-K · 旋轉會自動吸附 0° / 90° / 180° / 270°');
   } else {
     transformControls.detach();
     objectToolbar?.classList.add('hidden');
@@ -1428,7 +1505,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-panasonic-washer-persist-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-room-angle-magnet-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1475,9 +1552,7 @@ async function tryAutoLoadRepoModel() {
     modelRoot.add(gltf.scene);
     modelRoot.add(correctedW3);
 
-    const washer = createPanasonicWasher();
-    placeWasherAtBalcony(washer);
-    editableRoot.add(washer);
+    const washer = restoreOrCreateWasher();
 
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
