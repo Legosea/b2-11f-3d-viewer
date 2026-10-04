@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#f6f3ed" />
   <title>1004 Empty Interior · Three.js</title>
-  <link rel="stylesheet" href="./styles.css?v=20261004-component-material-library-v1" />
+  <link rel="stylesheet" href="./styles.css?v=20261004-woodgrain-threeviews-v2" />
   <script type="importmap">
     {
       "imports": {
@@ -16,20 +16,22 @@
   </script>
 </head>
 <body>
+  <input id="fileInput" type="file" accept=".skp" hidden />
+  <button id="exportBtn" hidden disabled></button>
   <div class="app">
     <header class="topbar">
       <div>
         <h1>1004 · Empty Interior 3D</h1>
-        <p>室內配置 · 元件庫 + 材質庫 + 自動記憶</p>
+        <p>室內配置 · 木紋材質 + 三視圖 + 元件庫</p>
       </div>
       <div class="actions">
-        <label class="button primary">
-          更換 SKP
-          <input id="fileInput" type="file" accept=".skp" hidden />
-        </label>
         <button id="fitBtn" class="button" disabled>置中</button>
-        <button id="libraryBtn" class="button">元件庫</button>
-        <button id="exportBtn" class="button" disabled>下載 GLB</button>
+        <div class="view-group" aria-label="三視圖">
+          <button id="topViewBtn" class="button view-button">俯視</button>
+          <button id="frontViewBtn" class="button view-button">正視</button>
+          <button id="sideViewBtn" class="button view-button">側視</button>
+        </div>
+        <button id="libraryBtn" class="button primary">元件庫</button>
       </div>
     </header>
 
@@ -137,18 +139,8 @@
         </section>
       </aside>
 
-      <section id="welcome" class="welcome">
-        <div class="drop-card">
-          <div class="icon">3D</div>
-          <h2>拖曳或選擇 1004.skp</h2>
-          <p>你的 SKP 約 96 MB，系統會優先使用 WASM 快速模式，避免純 JavaScript 解析耗盡瀏覽器記憶體。</p>
-          <label class="button primary big">
-            選擇 SketchUp 檔案
-            <input id="welcomeFileInput" type="file" accept=".skp" hidden />
-          </label>
-          <small>檔案只在你的瀏覽器中處理，不會上傳到本頁的伺服器。</small>
-        </div>
-      </section>
+      <input id="welcomeFileInput" type="file" accept=".skp" hidden />
+      <section id="welcome" class="welcome hidden"></section>
 
       <section id="loading" class="loading hidden">
         <div class="spinner"></div>
@@ -168,6 +160,6 @@
     </footer>
   </div>
 
-  <script type="module" src="./app.js?v=20261004-component-material-library-v1"></script>
+  <script type="module" src="./app.js?v=20261004-woodgrain-threeviews-v2"></script>
 </body>
 </html>
