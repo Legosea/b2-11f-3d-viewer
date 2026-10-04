@@ -14,6 +14,15 @@ const SHOWCASE_SUN_AZIMUTH_DEG = 245;   // 午後西南偏西日照
 const SHOWCASE_SUN_ELEVATION_DEG = 30;  // 秋季午後約 30 度仰角
 const SHOWCASE_TIME_LABEL = '午後 15:30';
 
+const WASHER_STORAGE_KEY = 'b2-11f-1004.panasonic-na-v170rph-k.v2';
+const WASHER_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 7.47,
+  y: 0,
+  z: -1.47,
+  rotationY: 0
+});
+
 const viewport = document.getElementById('viewport');
 const fileInput = document.getElementById('fileInput');
 const welcomeFileInput = document.getElementById('welcomeFileInput');
@@ -47,6 +56,7 @@ let editableMode = 'translate';
 const editRaycaster = new THREE.Raycaster();
 const editPointer = new THREE.Vector2();
 let washerSerial = 0;
+let washerSaveTimer = null;
 
 initThree();
 bindUI();
@@ -133,6 +143,15 @@ function initThree() {
       selectedEditable.rotation.x = 0;
       selectedEditable.rotation.z = 0;
     }
+
+    clearTimeout(washerSaveTimer);
+    washerSaveTimer = setTimeout(() => {
+      saveWasherState(selectedEditable);
+    }, 160);
+  });
+
+  transformControls.addEventListener('mouseUp', () => {
+    if (selectedEditable) saveWasherState(selectedEditable);
   });
   scene.add(transformControls.getHelper());
 
@@ -166,9 +185,15 @@ function bindUI() {
   fitBtn.addEventListener('click', fitCamera);
   exportBtn.addEventListener('click', downloadGlb);
   addWasherBtn?.addEventListener('click', () => {
-    const washer = createPanasonicWasher();
-    placeWasherAtBalcony(washer);
-    editableRoot.add(washer);
+    const existing = getCurrentWasher();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('Panasonic NA-V170RPH-K 已存在 · 已選取');
+      return;
+    }
+
+    const washer = restoreOrCreateWasher();
+    saveWasherState(washer);
     selectEditable(washer);
   });
   moveObjectBtn?.addEventListener('click', () => setEditableMode('translate'));
@@ -539,6 +564,101 @@ function applyPhotorealStyle(root) {
   });
 }
 
+function readSavedWasherState() {
+  try {
+    const raw = localStorage.getItem(WASHER_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : WASHER_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : WASHER_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : WASHER_DEFAULT_STATE.rotationY
+    };
+  } catch (error) {
+    console.warn('Unable to read saved washer state.', error);
+    return null;
+  }
+}
+
+function writeWasherState(state) {
+  try {
+    localStorage.setItem(WASHER_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY)
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist washer state.', error);
+    return false;
+  }
+}
+
+function saveWasherState(washer) {
+  if (!washer) return false;
+
+  const saved = writeWasherState({
+    exists: true,
+    x: washer.position.x,
+    y: 0,
+    z: washer.position.z,
+    rotationY: washer.rotation.y
+  });
+
+  if (saved) {
+    washer.userData.hasSavedPlacement = true;
+  }
+  return saved;
+}
+
+function saveWasherDeletedState() {
+  const current = readSavedWasherState() || WASHER_DEFAULT_STATE;
+  return writeWasherState({
+    ...current,
+    exists: false
+  });
+}
+
+function getCurrentWasher() {
+  return editableRoot?.children.find(
+    child => child.userData?.label === 'Panasonic NA-V170RPH-K'
+  ) || null;
+}
+
+function applyWasherState(washer, state) {
+  const next = state || WASHER_DEFAULT_STATE;
+  washer.position.set(next.x, 0, next.z);
+  washer.rotation.set(0, next.rotationY, 0);
+  washer.userData.floorY = 0;
+  washer.userData.hasSavedPlacement = Boolean(state);
+}
+
+function restoreOrCreateWasher() {
+  const saved = readSavedWasherState();
+
+  if (saved?.exists === false) {
+    return null;
+  }
+
+  const washer = createPanasonicWasher();
+  applyWasherState(washer, saved || WASHER_DEFAULT_STATE);
+  editableRoot.add(washer);
+
+  // Store the default once so the first reload is deterministic.
+  if (!saved) saveWasherState(washer);
+
+  return washer;
+}
+
 function createPanasonicWasher() {
   // Panasonic NA-V170RPH-K / 夜幕黑
   // Official dimensions: W640 x D773 x H1035 mm.
@@ -671,13 +791,9 @@ function createPanasonicWasher() {
 }
 
 function placeWasherAtBalcony(washer) {
-  // User-marked balcony position:
-  // between the two balcony windows, against the inner wall.
-  // Left window ends around x=7.03m; right window starts around x=7.91m.
-  // A 0.64m-wide washer fits comfortably in the ~0.88m solid-wall bay.
-  washer.position.set(7.47, 0, -1.47);
-  washer.rotation.set(0, 0, 0); // front faces the balcony railing / circulation side (+Z)
-  washer.userData.floorY = 0;
+  // User-confirmed default placement shown in the balcony screenshot.
+  // It is centred on the solid-wall bay between the two balcony windows.
+  applyWasherState(washer, WASHER_DEFAULT_STATE);
 }
 
 function getEditableAncestor(object) {
@@ -728,9 +844,10 @@ function deleteSelectedEditable() {
   transformControls.detach();
   selectedEditable = null;
   doomed.removeFromParent();
+  saveWasherDeletedState();
 
   objectToolbar?.classList.add('hidden');
-  setStatus('Panasonic NA-V170RPH-K 已刪除 · 可按「洗衣機」重新加入');
+  setStatus('Panasonic NA-V170RPH-K 已刪除並記憶 · 可按「洗衣機」重新加入');
 }
 
 function handleEditablePick(event) {
@@ -1311,7 +1428,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-panasonic-washer-editable-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-panasonic-washer-persist-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1370,7 +1487,15 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · 陽台已放置 Panasonic NA-V170RPH-K 夜幕黑 · 點選可編輯');
+    if (washer) {
+      setStatus(
+        washer.userData.hasSavedPlacement
+          ? '1004 · Panasonic 洗衣機已還原上次位置 · 可移動 / 旋轉 / 刪除'
+          : '1004 · Panasonic 洗衣機已放置預設位置 · 可移動 / 旋轉 / 刪除'
+      );
+    } else {
+      setStatus('1004 · 洗衣機目前為已刪除狀態 · 按「洗衣機」可重新加入');
+    }
     fitCamera();
   } catch (error) {
     console.error(error);
