@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
@@ -64,7 +65,17 @@ const COMPONENT_LIBRARY = Object.freeze({
       variants: ['ar8-raster-silver', 'cpb-wood', 'ak6-stainless']
     }
   ],
-  furniture: []
+  furniture: [
+    {
+      id: 'ija-reims-3seat',
+      brand: 'IJA 愛加',
+      model: 'Reims 蘭斯',
+      label: 'IJA 蘭斯 Reims 三人沙發',
+      depthMm: 970,
+      heightMm: 1040,
+      widthRangeMm: [2100, 2520]
+    }
+  ]
 });
 
 const WASHER_VARIANTS = Object.freeze({
@@ -150,6 +161,23 @@ const FRIDGE_DEFAULT_STATE = Object.freeze({
   z: -5.83,
   rotationY: 0,
   variant: 'w1-jade-white'
+});
+
+const SOFA_STORAGE_KEY = 'b2-11f-1004.ija-reims-3seat.v1';
+
+const SOFA_WIDTH_PRESETS = Object.freeze({
+  '210': { label: '210 cm', width: 2.10 },
+  '231': { label: '231 cm', width: 2.31 },
+  '252': { label: '252 cm', width: 2.52 }
+});
+
+const SOFA_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 4.62,
+  y: 0,
+  z: -3.30,
+  rotationY: 0,
+  widthPreset: '210'
 });
 
 const CENTRO_VARIANTS = Object.freeze({
@@ -266,11 +294,14 @@ const addKitchenBtn = document.getElementById('addKitchenBtn');
 const kitchenVariantButtons = [...document.querySelectorAll('[data-kitchen-variant]')];
 const kitchenCountertopButtons = [...document.querySelectorAll('[data-kitchen-countertop]')];
 const dishwasherToggleBtn = document.getElementById('dishwasherToggleBtn');
+const addSofaBtn = document.getElementById('addSofaBtn');
+const sofaWidthButtons = [...document.querySelectorAll('[data-sofa-width]')];
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
 const woodTextureCache = new Map();
 const surfaceTextureCache = new Map();
+let sofaFabricBumpTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
 let currentFilename = '1004.skp';
@@ -571,6 +602,30 @@ function bindUI() {
     selectEditable(kitchen);
     syncLibraryUI();
     setStatus('Cleanup CENTRO 已放回並選取 · 可移動 / 旋轉 / 刪除');
+  });
+
+  sofaWidthButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setSofaWidthFromLibrary(button.dataset.sofaWidth);
+    });
+  });
+
+  addSofaBtn?.addEventListener('click', () => {
+    const existing = getCurrentSofa();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('IJA 蘭斯 Reims 三人沙發已存在 · 已選取');
+      return;
+    }
+
+    const saved = readSofaState();
+    const state = saved ? { ...saved, exists: true } : SOFA_DEFAULT_STATE;
+    const sofa = createIjaReimsSofa(state.widthPreset);
+    applySofaState(sofa, state);
+    editableRoot.add(sofa);
+    saveSofaState(sofa);
+    selectEditable(sofa);
+    syncLibraryUI();
   });
 
   materialPresetButtons.forEach(button => {
@@ -1194,6 +1249,20 @@ function syncLibraryUI() {
       ? '已安裝於 CENTRO · 點此移除'
       : '安裝到 CENTRO 中央模組';
   }
+
+  const sofa = getCurrentSofa();
+  const savedSofa = readSofaState();
+  const sofaWidthPreset =
+    sofa?.userData?.widthPreset ||
+    savedSofa?.widthPreset ||
+    SOFA_DEFAULT_STATE.widthPreset;
+
+  sofaWidthButtons.forEach(button => {
+    button.classList.toggle(
+      'selected',
+      button.dataset.sofaWidth === sofaWidthPreset
+    );
+  });
 
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
@@ -1906,7 +1975,107 @@ function saveEditableState(object) {
     return saveKitchenState(object);
   }
 
+  if (object.userData?.componentId === 'ija-reims-3seat') {
+    return saveSofaState(object);
+  }
+
   return false;
+}
+
+function readSofaState() {
+  try {
+    const raw = localStorage.getItem(SOFA_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : SOFA_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : SOFA_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : SOFA_DEFAULT_STATE.rotationY,
+      widthPreset: SOFA_WIDTH_PRESETS[parsed.widthPreset]
+        ? parsed.widthPreset
+        : SOFA_DEFAULT_STATE.widthPreset
+    };
+  } catch (error) {
+    console.warn('Unable to read IJA Reims sofa state.', error);
+    return null;
+  }
+}
+
+function writeSofaState(state) {
+  try {
+    localStorage.setItem(SOFA_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY),
+      widthPreset: SOFA_WIDTH_PRESETS[state.widthPreset]
+        ? state.widthPreset
+        : SOFA_DEFAULT_STATE.widthPreset
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist IJA Reims sofa state.', error);
+    return false;
+  }
+}
+
+function saveSofaState(sofa) {
+  if (!sofa) return false;
+
+  const saved = writeSofaState({
+    exists: true,
+    x: sofa.position.x,
+    y: 0,
+    z: sofa.position.z,
+    rotationY: sofa.rotation.y,
+    widthPreset: sofa.userData.widthPreset || SOFA_DEFAULT_STATE.widthPreset
+  });
+
+  if (saved) sofa.userData.hasSavedPlacement = true;
+  return saved;
+}
+
+function saveSofaDeletedState() {
+  const current = readSofaState() || SOFA_DEFAULT_STATE;
+  return writeSofaState({ ...current, exists: false });
+}
+
+function getCurrentSofa() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'ija-reims-3seat'
+  ) || null;
+}
+
+function applySofaState(sofa, state) {
+  const next = state || SOFA_DEFAULT_STATE;
+  sofa.position.set(next.x, 0, next.z);
+  sofa.rotation.set(0, next.rotationY, 0);
+  sofa.userData.floorY = 0;
+  sofa.userData.widthPreset = SOFA_WIDTH_PRESETS[next.widthPreset]
+    ? next.widthPreset
+    : SOFA_DEFAULT_STATE.widthPreset;
+  sofa.userData.hasSavedPlacement = Boolean(state);
+}
+
+function restoreOrCreateSofa() {
+  const saved = readSofaState();
+  if (saved?.exists === false) return null;
+
+  const state = saved || SOFA_DEFAULT_STATE;
+  const sofa = createIjaReimsSofa(state.widthPreset);
+  applySofaState(sofa, state);
+  editableRoot.add(sofa);
+
+  if (!saved) saveSofaState(sofa);
+  return sofa;
 }
 
 function readSavedWasherState() {
@@ -2920,6 +3089,307 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
+function getSofaFabricBumpTexture() {
+  if (sofaFabricBumpTexture) return sofaFabricBumpTexture;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 160;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+  const random = seededRandom(hashString('ija-reims-light-gray-fabric'));
+
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < 4200; i++) {
+    const value = 108 + Math.floor(random() * 40);
+    ctx.fillStyle = `rgba(${value},${value},${value},0.16)`;
+    const x = random() * canvas.width;
+    const y = random() * canvas.height;
+    const r = 0.25 + random() * 0.55;
+    ctx.fillRect(x, y, r, r);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(5.5, 3.5);
+  texture.needsUpdate = true;
+  sofaFabricBumpTexture = texture;
+  return texture;
+}
+
+function createIjaReimsSofa(widthPreset = SOFA_DEFAULT_STATE.widthPreset) {
+  const preset = SOFA_WIDTH_PRESETS[widthPreset] || SOFA_WIDTH_PRESETS[SOFA_DEFAULT_STATE.widthPreset];
+  const width = preset.width;
+  const depth = 0.97;
+  const height = 1.04;
+
+  const group = new THREE.Group();
+  group.name = 'IJA_Reims_3Seat_' + widthPreset;
+  group.userData.editable = true;
+  group.userData.componentId = 'ija-reims-3seat';
+  group.userData.label = 'IJA 蘭斯 Reims 三人沙發';
+  group.userData.widthPreset = widthPreset;
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+  group.userData.productSize = { width, depth, height };
+
+  const bump = getSofaFabricBumpTexture();
+
+  const fabricMat = new THREE.MeshPhysicalMaterial({
+    color: 0xd8d8d5,
+    roughness: 0.88,
+    metalness: 0,
+    sheen: 0.16,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.92,
+    bumpMap: bump,
+    bumpScale: 0.006
+  });
+
+  const sideFabricMat = new THREE.MeshPhysicalMaterial({
+    color: 0xc7c8c6,
+    roughness: 0.90,
+    metalness: 0,
+    sheen: 0.10,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.95,
+    bumpMap: bump,
+    bumpScale: 0.005
+  });
+
+  const seamMat = new THREE.MeshStandardMaterial({
+    color: 0xb5b6b3,
+    roughness: 0.94,
+    metalness: 0
+  });
+
+  const woodMat = new THREE.MeshStandardMaterial({
+    color: 0x8f6d4e,
+    roughness: 0.68,
+    metalness: 0
+  });
+
+  const darkWoodMat = new THREE.MeshStandardMaterial({
+    color: 0x71533b,
+    roughness: 0.72,
+    metalness: 0
+  });
+
+  function roundedBox(w, h, d, radius, material, name='') {
+    const mesh = new THREE.Mesh(
+      new RoundedBoxGeometry(w, h, d, 4, radius),
+      material
+    );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = name;
+    group.add(mesh);
+    return mesh;
+  }
+
+  // Imported solid-wood platform and slim legs.
+  const baseW = width - 0.12;
+  const base = roundedBox(baseW, 0.075, 0.80, 0.018, woodMat, 'Reims_wood_base');
+  base.position.set(0, 0.205, 0.005);
+
+  const legW = 0.055;
+  const legH = 0.185;
+  const legD = 0.055;
+  [
+    [-baseW/2 + 0.13, -0.31],
+    [ baseW/2 - 0.13, -0.31],
+    [-baseW/2 + 0.13,  0.31],
+    [ baseW/2 - 0.13,  0.31]
+  ].forEach(([x,z], idx) => {
+    const leg = roundedBox(legW, legH, legD, 0.008, darkWoodMat, 'Reims_leg_' + idx);
+    leg.position.set(x, legH/2, z);
+  });
+
+  // Two independent spring-seat cushions.
+  const armW = 0.205;
+  const innerW = width - armW * 2 - 0.08;
+  const seatGap = 0.025;
+  const seatW = (innerW - seatGap) / 2;
+  const seatY = 0.405;
+  const seatZ = 0.075;
+
+  [-1, 1].forEach((side, idx) => {
+    const seat = roundedBox(
+      seatW,
+      0.195,
+      0.70,
+      0.075,
+      fabricMat,
+      'Reims_seat_' + idx
+    );
+    seat.position.set(
+      side * (seatW + seatGap) / 2,
+      seatY,
+      seatZ
+    );
+  });
+
+  // Broad upholstered arm rests with darker triangular-looking outer mass.
+  [-1, 1].forEach((side, idx) => {
+    const arm = roundedBox(
+      armW,
+      0.50,
+      0.82,
+      0.075,
+      sideFabricMat,
+      'Reims_arm_' + idx
+    );
+    arm.position.set(
+      side * (width/2 - armW/2),
+      0.455,
+      0.015
+    );
+
+    const cap = roundedBox(
+      armW * 0.80,
+      0.11,
+      0.58,
+      0.050,
+      fabricMat,
+      'Reims_arm_cap_' + idx
+    );
+    cap.position.set(
+      side * (width/2 - armW/2),
+      0.690,
+      0.055
+    );
+  });
+
+  // Back support frame, kept visually light like the reference sofa.
+  const backRail = roundedBox(
+    width - 0.30,
+    0.33,
+    0.11,
+    0.028,
+    sideFabricMat,
+    'Reims_back_support'
+  );
+  backRail.position.set(0, 0.655, -0.345);
+
+  // Two large loose back cushions, slightly reclined.
+  const backGap = 0.025;
+  const backW = (innerW - backGap) / 2;
+
+  [-1, 1].forEach((side, idx) => {
+    const back = roundedBox(
+      backW,
+      0.43,
+      0.19,
+      0.065,
+      fabricMat,
+      'Reims_back_cushion_' + idx
+    );
+    back.position.set(
+      side * (backW + backGap) / 2,
+      0.735,
+      -0.285
+    );
+    back.rotation.x = THREE.MathUtils.degToRad(-7);
+  });
+
+  // Subtle piping / seam between the two seat cushions and back cushions.
+  const seatSeam = roundedBox(
+    0.010,
+    0.120,
+    0.57,
+    0.004,
+    seamMat,
+    'Reims_seat_center_seam'
+  );
+  seatSeam.position.set(0, 0.445, seatZ + 0.015);
+
+  // One adjustable headrest, as shown in the supplied Reims reference.
+  const headrest = roundedBox(
+    Math.min(0.46, width * 0.21),
+    0.18,
+    0.145,
+    0.045,
+    fabricMat,
+    'Reims_headrest'
+  );
+  headrest.position.set(0.02, 0.965, -0.345);
+  headrest.rotation.x = THREE.MathUtils.degToRad(-5);
+
+  [-0.12, 0.12].forEach((offset, idx) => {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.010, 0.010, 0.115, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0x777b7c,
+        metalness: 0.68,
+        roughness: 0.35
+      })
+    );
+    post.position.set(offset, 0.875, -0.345);
+    post.castShadow = true;
+    post.name = 'Reims_headrest_post_' + idx;
+    group.add(post);
+  });
+
+  // Invisible pick proxy for easy mobile selection.
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 1.02, height * 1.02, depth * 1.02),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  pickProxy.position.y = height / 2;
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  return group;
+}
+
+function setSofaWidthFromLibrary(widthPreset) {
+  const preset = SOFA_WIDTH_PRESETS[widthPreset];
+  if (!preset) return;
+
+  const current = getCurrentSofa();
+  const saved = current
+    ? {
+        exists: true,
+        x: current.position.x,
+        y: 0,
+        z: current.position.z,
+        rotationY: current.rotation.y,
+        widthPreset
+      }
+    : {
+        ...(readSofaState() || SOFA_DEFAULT_STATE),
+        exists: true,
+        widthPreset
+      };
+
+  if (current) {
+    if (selectedEditable === current) {
+      transformControls.detach();
+      selectedEditable = null;
+    }
+    current.removeFromParent();
+  }
+
+  const sofa = createIjaReimsSofa(widthPreset);
+  applySofaState(sofa, saved);
+  editableRoot.add(sofa);
+  saveSofaState(sofa);
+  selectEditable(sofa);
+  syncLibraryUI();
+
+  setStatus(
+    'IJA 蘭斯 Reims 三人沙發 · 規劃寬度 ' +
+    SOFA_WIDTH_PRESETS[widthPreset].label +
+    ' · 已套用並記憶'
+  );
+}
+
 function createPanasonicFridge() {
   // Panasonic NR-F601WX official overall size:
   // W685 x D745 x H1828 mm, effective volume 600 L.
@@ -3361,6 +3831,8 @@ function deleteSelectedEditable() {
     saveFridgeDeletedState();
   } else if (componentId === 'cleanup-centro-207') {
     saveKitchenDeletedState();
+  } else if (componentId === 'ija-reims-3seat') {
+    saveSofaDeletedState();
   }
 
   objectToolbar?.classList.add('hidden');
@@ -3987,7 +4459,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-integrated-door-v4'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-ija-reims-sofa-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -4039,6 +4511,7 @@ async function tryAutoLoadRepoModel() {
     const kitchen = restoreOrCreateKitchen();
     const fridge = restoreOrCreateFridge();
     const washer = restoreOrCreateWasher();
+    const sofa = restoreOrCreateSofa();
     syncLibraryUI();
 
     welcome.classList.add('hidden');
@@ -4050,7 +4523,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · Cleanup CENTRO + Panasonic NR-F601WX 已配置 · 元件庫可切換配色'
+      '1004 · CENTRO + NR-F601WX + IJA Reims 三人沙發已配置 · 元件庫可調整'
     );
     fitCamera();
   } catch (error) {
