@@ -263,3 +263,31 @@ button,input{font:inherit}
     linear-gradient(130deg,transparent 0 46%,rgba(235,232,225,.13) 47% 48%,transparent 49% 100%),
     #555653
 }
+
+.sofa-icon{
+  position:relative;
+  width:58px;height:48px;
+  background:#efeae2
+}
+.sofa-icon:before{
+  content:"";position:absolute;
+  left:8px;right:8px;bottom:10px;height:17px;
+  border-radius:7px 7px 5px 5px;
+  background:#d2d3d1;
+  box-shadow:
+    0 -12px 0 -2px #dedfdd,
+    inset 0 -3px rgba(0,0,0,.05)
+}
+.sofa-icon:after{
+  content:"";position:absolute;
+  left:5px;right:5px;bottom:9px;height:4px;
+  border-radius:2px;background:#8f6d4e
+}
+.sofa-icon span:before,
+.sofa-icon span:after{
+  content:"";position:absolute;bottom:23px;
+  width:8px;height:18px;border-radius:5px;
+  background:#c3c5c3
+}
+.sofa-icon span:before{left:5px}
+.sofa-icon span:after{right:5px}
