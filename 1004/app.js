@@ -45,6 +45,14 @@ const COMPONENT_LIBRARY = Object.freeze({
       model: 'NR-F601WX',
       label: 'Panasonic NR-F601WX',
       variants: ['x1-diamond-black', 's1-mist-gray', 'w1-jade-white']
+    },
+    {
+      id: 'bosch-smv6zax00x',
+      brand: 'Bosch',
+      model: 'SMV6ZAX00X',
+      label: 'Bosch SMV6ZAX00X',
+      builtIn: true,
+      sizeMm: [598, 550, 815]
     }
   ],
   kitchens: [
@@ -131,7 +139,8 @@ const KITCHEN_DEFAULT_STATE = Object.freeze({
   z: -5.845,
   rotationY: 0,
   variant: 'ar8-raster-silver',
-  countertop: 'e-coat-stainless'
+  countertop: 'e-coat-stainless',
+  dishwasherInstalled: true
 });
 
 const FRIDGE_DEFAULT_STATE = Object.freeze({
@@ -256,6 +265,7 @@ const fridgeVariantButtons = [...document.querySelectorAll('[data-fridge-variant
 const addKitchenBtn = document.getElementById('addKitchenBtn');
 const kitchenVariantButtons = [...document.querySelectorAll('[data-kitchen-variant]')];
 const kitchenCountertopButtons = [...document.querySelectorAll('[data-kitchen-countertop]')];
+const dishwasherToggleBtn = document.getElementById('dishwasherToggleBtn');
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -499,6 +509,27 @@ function bindUI() {
     button.addEventListener('click', () => {
       setKitchenCountertopFromLibrary(button.dataset.kitchenCountertop);
     });
+  });
+
+  dishwasherToggleBtn?.addEventListener('click', () => {
+    let kitchen = getCurrentKitchen();
+
+    if (!kitchen) {
+      const saved = readKitchenState();
+      kitchen = createCentroKitchen();
+      applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+      editableRoot.add(kitchen);
+    }
+
+    const nextInstalled = !kitchen.userData.dishwasherInstalled;
+    applyKitchenDishwasher(kitchen, nextInstalled, true);
+    selectEditable(kitchen);
+
+    setStatus(
+      nextInstalled
+        ? 'Bosch SMV6ZAX00X 已嵌入 CENTRO 中央模組'
+        : 'Bosch SMV6ZAX00X 已從 CENTRO 移除'
+    );
   });
 
   addFridgeBtn?.addEventListener('click', () => {
@@ -1152,6 +1183,18 @@ function syncLibraryUI() {
     );
   });
 
+  const dishwasherInstalled =
+    kitchen?.userData?.dishwasherInstalled ??
+    savedKitchen?.dishwasherInstalled ??
+    KITCHEN_DEFAULT_STATE.dishwasherInstalled;
+
+  if (dishwasherToggleBtn) {
+    dishwasherToggleBtn.classList.toggle('selected', dishwasherInstalled);
+    dishwasherToggleBtn.textContent = dishwasherInstalled
+      ? '已安裝於 CENTRO · 點此移除'
+      : '安裝到 CENTRO 中央模組';
+  }
+
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
     const scope = button.dataset.materialScope;
@@ -1306,7 +1349,8 @@ function readKitchenState() {
         : KITCHEN_DEFAULT_STATE.variant,
       countertop: CENTRO_COUNTERTOP_VARIANTS[parsed.countertop]
         ? parsed.countertop
-        : KITCHEN_DEFAULT_STATE.countertop
+        : KITCHEN_DEFAULT_STATE.countertop,
+      dishwasherInstalled: parsed.dishwasherInstalled !== false
     };
   } catch (error) {
     console.warn('Unable to read CENTRO state.', error);
@@ -1327,7 +1371,8 @@ function writeKitchenState(state) {
         : KITCHEN_DEFAULT_STATE.variant,
       countertop: CENTRO_COUNTERTOP_VARIANTS[state.countertop]
         ? state.countertop
-        : KITCHEN_DEFAULT_STATE.countertop
+        : KITCHEN_DEFAULT_STATE.countertop,
+      dishwasherInstalled: state.dishwasherInstalled !== false
     }));
     return true;
   } catch (error) {
@@ -1346,7 +1391,8 @@ function saveKitchenState(kitchen) {
     z: kitchen.position.z,
     rotationY: kitchen.rotation.y,
     variant: kitchen.userData.variant || KITCHEN_DEFAULT_STATE.variant,
-    countertop: kitchen.userData.countertop || KITCHEN_DEFAULT_STATE.countertop
+    countertop: kitchen.userData.countertop || KITCHEN_DEFAULT_STATE.countertop,
+    dishwasherInstalled: kitchen.userData.dishwasherInstalled !== false
   });
 
   if (saved) kitchen.userData.hasSavedPlacement = true;
@@ -1380,6 +1426,11 @@ function applyKitchenState(kitchen, state) {
   applyKitchenCountertop(
     kitchen,
     next.countertop || KITCHEN_DEFAULT_STATE.countertop,
+    false
+  );
+  applyKitchenDishwasher(
+    kitchen,
+    next.dishwasherInstalled !== false,
     false
   );
 }
@@ -2014,13 +2065,13 @@ function createCentroKitchen() {
     roughness: 0.58
   });
 
-  function addBox(w, h, d, x, y, z, material, name='') {
+  function addBox(w, h, d, x, y, z, material, name='', parent=assembly) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
     mesh.position.set(x, y, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.name = name;
-    assembly.add(mesh);
+    parent.add(mesh);
     return mesh;
   }
 
@@ -2031,8 +2082,15 @@ function createCentroKitchen() {
   const moduleW = width / 3;
 
   // Drawer fronts / hidden handle detail.
+  // Left and right remain normal CENTRO cabinet modules.
+  // The centre is reserved for the 60 cm Bosch full-integrated dishwasher.
+  const centerDrawerGroup = new THREE.Group();
+  centerDrawerGroup.name = 'CENTRO_Center_Drawers';
+  assembly.add(centerDrawerGroup);
+
   for (let i = 0; i < 3; i++) {
     const cx = moduleW * i + moduleW / 2;
+    const targetParent = i === 1 ? centerDrawerGroup : assembly;
 
     [0.18, 0.42, 0.68].forEach((cy, row) => {
       const h = row === 0 ? 0.16 : 0.22;
@@ -2044,7 +2102,8 @@ function createCentroKitchen() {
         cy,
         depth + 0.012,
         cabinetMat,
-        'CENTRO_drawer'
+        'CENTRO_drawer',
+        targetParent
       );
     });
 
@@ -2056,9 +2115,95 @@ function createCentroKitchen() {
       0.785,
       depth + 0.026,
       darkMat,
-      'CENTRO_handle'
+      'CENTRO_handle',
+      targetParent
     );
   }
+
+  // Bosch SMV6ZAX00X — full-integrated 60 cm dishwasher.
+  // Official machine size: H815 x W598 x D550 mm.
+  const dishwasherGroup = new THREE.Group();
+  dishwasherGroup.name = 'Bosch_SMV6ZAX00X';
+  dishwasherGroup.userData.componentId = 'bosch-smv6zax00x';
+  dishwasherGroup.userData.label = 'Bosch SMV6ZAX00X';
+  assembly.add(dishwasherGroup);
+
+  const dishwasherW = 0.598;
+  const dishwasherD = 0.550;
+  const dishwasherH = 0.815;
+  const dishwasherX = moduleW * 1.5;
+  const dishwasherBottom = 0.018;
+  const dishwasherFrontZ = depth + 0.014;
+
+  const dishwasherBodyMat = new THREE.MeshStandardMaterial({
+    color: 0x4f5355,
+    metalness: 0.50,
+    roughness: 0.42
+  });
+
+  const dishwasherControlMat = new THREE.MeshStandardMaterial({
+    color: 0x252829,
+    metalness: 0.58,
+    roughness: 0.30
+  });
+
+  // The actual machine body is mostly hidden behind the cabinet door.
+  addBox(
+    dishwasherW,
+    dishwasherH,
+    dishwasherD,
+    dishwasherX,
+    dishwasherBottom + dishwasherH / 2,
+    depth - dishwasherD / 2 - 0.018,
+    dishwasherBodyMat,
+    'Bosch_SMV6ZAX00X_body',
+    dishwasherGroup
+  );
+
+  // Full-integrated furniture front follows the selected CENTRO cabinet finish.
+  addBox(
+    dishwasherW,
+    0.742,
+    0.022,
+    dishwasherX,
+    0.420,
+    dishwasherFrontZ,
+    cabinetMat,
+    'Bosch_SMV6ZAX00X_integrated_front',
+    dishwasherGroup
+  );
+
+  // Very thin top control/reveal line; the real controls are hidden when closed.
+  addBox(
+    dishwasherW - 0.028,
+    0.018,
+    0.014,
+    dishwasherX,
+    0.805,
+    dishwasherFrontZ + 0.010,
+    dishwasherControlMat,
+    'Bosch_SMV6ZAX00X_control_reveal',
+    dishwasherGroup
+  );
+
+  // InfoLight-style tiny status indicator at upper-left edge.
+  const infoLightMat = new THREE.MeshStandardMaterial({
+    color: 0xddefff,
+    emissive: 0x80b9ff,
+    emissiveIntensity: 0.50,
+    roughness: 0.35
+  });
+  addBox(
+    0.012,
+    0.012,
+    0.008,
+    dishwasherX - dishwasherW / 2 + 0.030,
+    0.805,
+    dishwasherFrontZ + 0.019,
+    infoLightMat,
+    'Bosch_SMV6ZAX00X_info_light',
+    dishwasherGroup
+  );
 
   // Countertop: material can be selected independently from cabinet fronts.
   addBox(
@@ -2233,9 +2378,13 @@ function createCentroKitchen() {
     cabinet: cabinetMat,
     countertop: counterMat
   };
+  group._dishwasherGroup = dishwasherGroup;
+  group._centerDrawerGroup = centerDrawerGroup;
+  group.userData.dishwasherInstalled = KITCHEN_DEFAULT_STATE.dishwasherInstalled;
 
   applyKitchenVariant(group, KITCHEN_DEFAULT_STATE.variant, false);
   applyKitchenCountertop(group, KITCHEN_DEFAULT_STATE.countertop, false);
+  applyKitchenDishwasher(group, KITCHEN_DEFAULT_STATE.dishwasherInstalled, false);
   return group;
 }
 
@@ -2295,6 +2444,28 @@ function applyKitchenCountertop(kitchen, countertopId, save = true) {
   kitchen.userData.countertop = CENTRO_COUNTERTOP_VARIANTS[countertopId]
     ? countertopId
     : KITCHEN_DEFAULT_STATE.countertop;
+
+  if (save) {
+    saveKitchenState(kitchen);
+  }
+
+  syncLibraryUI();
+  return true;
+}
+
+function applyKitchenDishwasher(kitchen, installed, save = true) {
+  if (!kitchen) return false;
+
+  const enabled = installed !== false;
+  kitchen.userData.dishwasherInstalled = enabled;
+
+  if (kitchen._dishwasherGroup) {
+    kitchen._dishwasherGroup.visible = enabled;
+  }
+
+  if (kitchen._centerDrawerGroup) {
+    kitchen._centerDrawerGroup.visible = !enabled;
+  }
 
   if (save) {
     saveKitchenState(kitchen);
@@ -3405,7 +3576,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-sink-left-cook-right-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-bosch-smv6zax00x-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
