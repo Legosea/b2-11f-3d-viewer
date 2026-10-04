@@ -772,7 +772,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-1545-1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
