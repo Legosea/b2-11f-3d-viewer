@@ -18,6 +18,9 @@ jobs:
       - name: Install viewer
         run: npm ci
         working-directory: viewer
+      - name: Link case
+        run: npm run link-case -- ../case
+        working-directory: viewer
       - name: Stable shell regression tests
         run: |
           node --test tests/v6-production-entry.test.mjs
