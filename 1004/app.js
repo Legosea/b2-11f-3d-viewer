@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
@@ -26,8 +27,13 @@ const modeBadge = document.getElementById('modeBadge');
 const modelInfo = document.getElementById('modelInfo');
 const fitBtn = document.getElementById('fitBtn');
 const exportBtn = document.getElementById('exportBtn');
+const addWasherBtn = document.getElementById('addWasherBtn');
+const objectToolbar = document.getElementById('objectToolbar');
+const moveObjectBtn = document.getElementById('moveObjectBtn');
+const rotateObjectBtn = document.getElementById('rotateObjectBtn');
+const deleteObjectBtn = document.getElementById('deleteObjectBtn');
 
-let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot;
+let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
@@ -36,6 +42,11 @@ let threeTextureCache = new Map();
 let textureObjectUrls = [];
 let openSkpModulePromise = null;
 let wasmModulePromise = null;
+let selectedEditable = null;
+let editableMode = 'translate';
+const editRaycaster = new THREE.Raycaster();
+const editPointer = new THREE.Vector2();
+let washerSerial = 0;
 
 initThree();
 bindUI();
@@ -104,6 +115,27 @@ function initThree() {
   modelRoot = new THREE.Group();
   scene.add(modelRoot);
 
+  editableRoot = new THREE.Group();
+  editableRoot.name = 'Editable_Objects';
+  scene.add(editableRoot);
+
+  transformControls = new TransformControls(camera, renderer.domElement);
+  transformControls.setSize(0.78);
+  transformControls.setTranslationSnap(0.01);
+  transformControls.setRotationSnap(THREE.MathUtils.degToRad(1));
+  transformControls.addEventListener('dragging-changed', event => {
+    controls.enabled = !event.value;
+  });
+  transformControls.addEventListener('objectChange', () => {
+    if (!selectedEditable) return;
+    selectedEditable.position.y = selectedEditable.userData.floorY ?? 0;
+    if (editableMode === 'rotate') {
+      selectedEditable.rotation.x = 0;
+      selectedEditable.rotation.z = 0;
+    }
+  });
+  scene.add(transformControls.getHelper());
+
   interiorLightRoot = new THREE.Group();
   interiorLightRoot.name = 'Interior_Lighting';
   scene.add(interiorLightRoot);
@@ -133,6 +165,25 @@ function bindUI() {
   welcomeFileInput.addEventListener('change', e => pickFile(e.target.files?.[0]));
   fitBtn.addEventListener('click', fitCamera);
   exportBtn.addEventListener('click', downloadGlb);
+  addWasherBtn?.addEventListener('click', () => {
+    const washer = createPanasonicWasher();
+    placeWasherAtBalcony(washer);
+    editableRoot.add(washer);
+    selectEditable(washer);
+  });
+  moveObjectBtn?.addEventListener('click', () => setEditableMode('translate'));
+  rotateObjectBtn?.addEventListener('click', () => setEditableMode('rotate'));
+  deleteObjectBtn?.addEventListener('click', deleteSelectedEditable);
+  renderer.domElement.addEventListener('pointerdown', handleEditablePick);
+  window.addEventListener('keydown', event => {
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedEditable) {
+      event.preventDefault();
+      deleteSelectedEditable();
+    }
+    if (event.key.toLowerCase() === 'g') setEditableMode('translate');
+    if (event.key.toLowerCase() === 'r') setEditableMode('rotate');
+    if (event.key === 'Escape') selectEditable(null);
+  });
 
   ['dragenter','dragover'].forEach(type => {
     window.addEventListener(type, e => {
@@ -486,6 +537,221 @@ function applyPhotorealStyle(root) {
       }
     });
   });
+}
+
+function createPanasonicWasher() {
+  // Panasonic NA-V170RPH-K / 夜幕黑
+  // Official dimensions: W640 x D773 x H1035 mm.
+  const width = 0.640;
+  const depth = 0.773;
+  const height = 1.035;
+
+  const group = new THREE.Group();
+  group.name = 'Panasonic_NA-V170RPH-K_' + (++washerSerial);
+  group.userData.editable = true;
+  group.userData.label = 'Panasonic NA-V170RPH-K';
+  group.userData.productSize = { width, depth, height };
+  group.userData.floorY = 0;
+
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: 0x171819,
+    metalness: 0.30,
+    roughness: 0.52,
+    clearcoat: 0.22,
+    clearcoatRoughness: 0.38
+  });
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x0d0f10,
+    metalness: 0.22,
+    roughness: 0.30
+  });
+  const trimMat = new THREE.MeshStandardMaterial({
+    color: 0x555b60,
+    metalness: 0.76,
+    roughness: 0.24
+  });
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x35464d,
+    transparent: true,
+    opacity: 0.74,
+    roughness: 0.08,
+    metalness: 0,
+    transmission: 0.28,
+    thickness: 0.018
+  });
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    bodyMat
+  );
+  body.position.y = height / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  // Slightly recessed front fascia.
+  const fascia = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.94, height * 0.90, 0.018),
+    panelMat
+  );
+  fascia.position.set(0, height * 0.50, depth / 2 + 0.010);
+  fascia.castShadow = true;
+  fascia.receiveShadow = true;
+  group.add(fascia);
+
+  // Touch-control band.
+  const controlBand = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.88, 0.125, 0.024),
+    panelMat
+  );
+  controlBand.position.set(0, height * 0.885, depth / 2 + 0.022);
+  group.add(controlBand);
+
+  const displayMat = new THREE.MeshStandardMaterial({
+    color: 0x071015,
+    emissive: 0x173341,
+    emissiveIntensity: 0.34,
+    roughness: 0.26
+  });
+  const display = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.26, 0.048, 0.008),
+    displayMat
+  );
+  display.position.set(width * 0.17, height * 0.89, depth / 2 + 0.038);
+  group.add(display);
+
+  // Front loading door.
+  const ring = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.238, 0.238, 0.050, 64),
+    trimMat
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.set(0, height * 0.47, depth / 2 + 0.034);
+  ring.castShadow = true;
+  ring.receiveShadow = true;
+  group.add(ring);
+
+  const doorInset = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.196, 0.196, 0.036, 64),
+    panelMat
+  );
+  doorInset.rotation.x = Math.PI / 2;
+  doorInset.position.set(0, height * 0.47, depth / 2 + 0.043);
+  group.add(doorInset);
+
+  const doorGlass = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.170, 0.170, 0.018, 64),
+    glassMat
+  );
+  doorGlass.rotation.x = Math.PI / 2;
+  doorGlass.position.set(0, height * 0.47, depth / 2 + 0.052);
+  doorGlass.receiveShadow = true;
+  group.add(doorGlass);
+
+  // Bottom plinth / feet.
+  const plinth = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.92, 0.055, depth * 0.86),
+    panelMat
+  );
+  plinth.position.set(0, 0.028, -0.015);
+  plinth.castShadow = true;
+  plinth.receiveShadow = true;
+  group.add(plinth);
+
+  // Invisible hit target makes mobile selection easier.
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 1.03, height * 1.03, depth * 1.03),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+  );
+  pickProxy.position.y = height / 2;
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  return group;
+}
+
+function placeWasherAtBalcony(washer) {
+  // User-marked balcony position:
+  // between the two balcony windows, against the inner wall.
+  // Left window ends around x=7.03m; right window starts around x=7.91m.
+  // A 0.64m-wide washer fits comfortably in the ~0.88m solid-wall bay.
+  washer.position.set(7.47, 0, -1.47);
+  washer.rotation.set(0, 0, 0); // front faces the balcony railing / circulation side (+Z)
+  washer.userData.floorY = 0;
+}
+
+function getEditableAncestor(object) {
+  let node = object;
+  while (node) {
+    if (node.userData?.editable) return node;
+    node = node.parent;
+  }
+  return null;
+}
+
+function setEditableMode(mode) {
+  editableMode = mode;
+  transformControls.setMode(mode);
+
+  if (mode === 'translate') {
+    transformControls.showX = true;
+    transformControls.showY = false;
+    transformControls.showZ = true;
+  } else {
+    transformControls.showX = false;
+    transformControls.showY = true;
+    transformControls.showZ = false;
+  }
+
+  moveObjectBtn?.classList.toggle('active', mode === 'translate');
+  rotateObjectBtn?.classList.toggle('active', mode === 'rotate');
+}
+
+function selectEditable(object) {
+  selectedEditable = object;
+
+  if (object) {
+    transformControls.attach(object);
+    setEditableMode(editableMode);
+    objectToolbar?.classList.remove('hidden');
+    setStatus('已選取 Panasonic NA-V170RPH-K · 可移動 / 旋轉 / 刪除');
+  } else {
+    transformControls.detach();
+    objectToolbar?.classList.add('hidden');
+  }
+}
+
+function deleteSelectedEditable() {
+  if (!selectedEditable) return;
+
+  const doomed = selectedEditable;
+  transformControls.detach();
+  selectedEditable = null;
+  doomed.removeFromParent();
+
+  objectToolbar?.classList.add('hidden');
+  setStatus('Panasonic NA-V170RPH-K 已刪除 · 可按「洗衣機」重新加入');
+}
+
+function handleEditablePick(event) {
+  if (transformControls.dragging) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  editPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  editPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  editRaycaster.setFromCamera(editPointer, camera);
+  const hits = editRaycaster.intersectObjects(editableRoot.children, true);
+
+  if (hits.length) {
+    const picked = getEditableAncestor(hits[0].object);
+    if (picked) {
+      selectEditable(picked);
+      return;
+    }
+  }
+
+  selectEditable(null);
 }
 
 function replaceLivingRoomW3(root) {
@@ -941,6 +1207,20 @@ function updatePresentationGround(box) {
 }
 
 function clearModel() {
+  if (transformControls) transformControls.detach();
+  selectedEditable = null;
+  if (objectToolbar) objectToolbar.classList.add('hidden');
+  if (editableRoot) {
+    editableRoot.traverse(obj => {
+      if (obj.isMesh) {
+        obj.geometry?.dispose?.();
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.filter(Boolean).forEach(mat => mat.dispose?.());
+      }
+    });
+    while (editableRoot.children.length) editableRoot.remove(editableRoot.children[0]);
+  }
+
   modelRoot.traverse(obj => {
     if (obj.isMesh) {
       obj.geometry?.dispose?.();
@@ -1031,7 +1311,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-flush-black-sash-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-panasonic-washer-editable-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1077,6 +1357,11 @@ async function tryAutoLoadRepoModel() {
     const correctedW3 = replaceLivingRoomW3(gltf.scene);
     modelRoot.add(gltf.scene);
     modelRoot.add(correctedW3);
+
+    const washer = createPanasonicWasher();
+    placeWasherAtBalcony(washer);
+    editableRoot.add(washer);
+
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
     exportBtn.disabled = false;
@@ -1085,7 +1370,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · W3 上排左右黑框窗扇 · 已取消簍空縫');
+    setStatus('1004 · 陽台已放置 Panasonic NA-V170RPH-K 夜幕黑 · 點選可編輯');
     fitCamera();
   } catch (error) {
     console.error(error);
