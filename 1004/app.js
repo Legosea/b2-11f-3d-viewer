@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
@@ -22,7 +25,7 @@ const modelInfo = document.getElementById('modelInfo');
 const fitBtn = document.getElementById('fitBtn');
 const exportBtn = document.getElementById('exportBtn');
 
-let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight;
+let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, composer, ssaoPass;
 let orthoSize = 12;
 let nordicWoodTexture = null;
 let currentSceneData = null;
@@ -39,7 +42,7 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xece7de);
+  scene.background = new THREE.Color(0xd9d3c9);
 
   camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.01, 500);
   camera.position.set(10, 9, 10);
@@ -49,20 +52,16 @@ function initThree() {
     powerPreference: 'high-performance',
     alpha: false
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.86;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 0.72;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xece7de, 1);
+  renderer.setClearColor(0xd9d3c9, 1);
   viewport.appendChild(renderer.domElement);
 
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const roomEnvironment = new RoomEnvironment();
-  scene.environment = pmrem.fromScene(roomEnvironment, 0.05).texture;
-  roomEnvironment.dispose();
-  pmrem.dispose();
+  scene.environment = null;
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -77,20 +76,20 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.target.set(5, 1, -3);
 
-  scene.add(new THREE.HemisphereLight(0xfff8ec, 0xb8b0a4, 1.25));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.16));
+  scene.add(new THREE.HemisphereLight(0xfff7e8, 0xa79f94, 0.46));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.035));
 
-  sunLight = new THREE.DirectionalLight(0xffefcf, 1.85);
+  sunLight = new THREE.DirectionalLight(0xffedcc, 1.22);
   sunLight.position.set(10, 16, 9);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
-  sunLight.shadow.radius = 5;
-  sunLight.shadow.bias = -0.00008;
+  sunLight.shadow.radius = 3;
+  sunLight.shadow.bias = -0.00015;
   sunLight.target.position.set(5, 0, -3);
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xdfe8f2, 0.32);
+  const fill = new THREE.DirectionalLight(0xdbe4ee, 0.10);
   fill.position.set(-8, 7, -10);
   scene.add(fill);
 
@@ -102,11 +101,22 @@ function initThree() {
 
   nordicWoodTexture = createWoodTexture();
 
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+
+  ssaoPass = new SSAOPass(scene, camera, 1, 1);
+  ssaoPass.kernelRadius = 0.18;
+  ssaoPass.minDistance = 0.001;
+  ssaoPass.maxDistance = 0.055;
+  ssaoPass.output = SSAOPass.OUTPUT.Default;
+  composer.addPass(ssaoPass);
+  composer.addPass(new OutputPass());
+
   window.addEventListener('resize', resize);
   resize();
   renderer.setAnimationLoop(() => {
     controls.update();
-    renderer.render(scene, camera);
+    composer.render();
   });
 }
 
@@ -122,6 +132,8 @@ function resize() {
   camera.updateProjectionMatrix();
 
   renderer.setSize(w, h, false);
+  composer?.setSize(w, h);
+  ssaoPass?.setSize(w, h);
 }
 
 function bindUI() {
@@ -389,7 +401,37 @@ function ensurePlanarUV(geometry, scale = 0.7) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
-function styleNordicMaterial(material, mesh) {
+function classifyArchitectureMesh(mesh) {
+  mesh.geometry?.computeBoundingBox();
+  const local = mesh.geometry?.boundingBox;
+  if (!local) return 'other';
+
+  mesh.updateWorldMatrix(true, false);
+  const box = local.clone().applyMatrix4(mesh.matrixWorld);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const footprint = Math.max(size.x * size.z, 0);
+
+  // Large thin horizontal surfaces close to the lowest architectural level
+  // are treated as floor slabs. This avoids relying on inconsistent SKP
+  // material names after conversion.
+  if (
+    size.y < 0.22 &&
+    footprint > 1.0 &&
+    center.y < 0.65
+  ) {
+    return 'floor';
+  }
+
+  // Tall broad surfaces are primarily walls.
+  if (size.y > 1.4 && Math.max(size.x, size.z) > 0.7) {
+    return 'wall';
+  }
+
+  return 'other';
+}
+
+function styleNordicMaterial(material, mesh, architectureClass = 'other') {
   if (!material) return;
 
   const name = (material.name || '').toLowerCase();
@@ -398,7 +440,19 @@ function styleNordicMaterial(material, mesh) {
   material.metalness = 0.02;
   material.roughness = 0.82;
 
-  if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
+  if (architectureClass === 'floor') {
+    setColor(0xc49b68);
+    material.metalness = 0;
+    material.roughness = 0.88;
+    ensurePlanarUV(mesh.geometry, 0.78);
+    material.map = nordicWoodTexture;
+    nordicWoodTexture.repeat.set(1.25, 1.25);
+  } else if (architectureClass === 'wall') {
+    setColor(0xcfc8be);
+    material.metalness = 0;
+    material.roughness = 0.94;
+    material.map = null;
+  } else if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
     setColor(0xc9d6d3);
     material.transparent = true;
     material.opacity = name.includes('railing') ? 0.36 : 0.30;
@@ -453,7 +507,7 @@ function styleNordicMaterial(material, mesh) {
     setColor(0xe1dbd2);
     material.roughness = 0.78;
   } else {
-    setColor(0xe6e0d8);
+    setColor(0xd6cec3);
     material.metalness = 0;
     material.roughness = 0.9;
   }
@@ -463,7 +517,7 @@ function styleNordicMaterial(material, mesh) {
 }
 
 function applyNordicStyle(root) {
-  const styled = new Set();
+  root.updateMatrixWorld(true);
 
   root.traverse(obj => {
     if (!obj.isMesh) return;
@@ -471,15 +525,16 @@ function applyNordicStyle(root) {
     obj.castShadow = true;
     obj.receiveShadow = true;
 
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    mats.filter(Boolean).forEach(mat => {
-      if (!styled.has(mat.uuid)) {
-        styleNordicMaterial(mat, obj);
-        styled.add(mat.uuid);
-      } else if ((mat.name || '').toLowerCase().includes('000__wood__matte')) {
-        ensurePlanarUV(obj.geometry, 0.66);
-      }
+    const architectureClass = classifyArchitectureMesh(obj);
+    const originals = Array.isArray(obj.material) ? obj.material : [obj.material];
+    const cloned = originals.map(mat => {
+      if (!mat) return mat;
+      const copy = mat.clone();
+      styleNordicMaterial(copy, obj, architectureClass);
+      return copy;
     });
+
+    obj.material = Array.isArray(obj.material) ? cloned : cloned[0];
   });
 }
 
@@ -652,7 +707,7 @@ function updatePresentationGround(box) {
     new THREE.ShadowMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.26
+      opacity: 0.34
     })
   );
   shadow.rotation.x = -Math.PI / 2;
