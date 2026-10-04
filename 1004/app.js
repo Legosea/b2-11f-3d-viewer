@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
 const OPENSKP_WASM_BASE = 'https://cdn.jsdelivr.net/gh/iamahsanmehmood/openskp@python-v1.3.0/examples/web-viewer/wasm/';
 const LARGE_FILE_BYTES = 50 * 1024 * 1024;
+
+const BUILDING_FACING_AZIMUTH_DEG = 315; // 坐東南、向西北
+const SHOWCASE_SUN_AZIMUTH_DEG = 245;   // 午後西南偏西日照
+const SHOWCASE_SUN_ELEVATION_DEG = 30;  // 秋季午後約 30 度仰角
+const SHOWCASE_TIME_LABEL = '午後 15:30';
 
 const viewport = document.getElementById('viewport');
 const fileInput = document.getElementById('fileInput');
@@ -23,7 +27,6 @@ const fitBtn = document.getElementById('fitBtn');
 const exportBtn = document.getElementById('exportBtn');
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight;
-let orthoSize = 12;
 let nordicWoodTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
@@ -39,30 +42,30 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xded8cf);
+  scene.background = new THREE.Color(0xe2ddd4);
 
-  camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.01, 500);
-  camera.position.set(10, 9, 10);
+  // Perspective projection reads more like a real architectural photograph
+  // than the previous orthographic / dollhouse view.
+  camera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
+  camera.position.set(12, 9, 12);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
     powerPreference: 'high-performance',
     alpha: false
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.72;
+  renderer.toneMappingExposure = 0.95;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xded8cf, 1);
+  renderer.setClearColor(0xe2ddd4, 1);
   viewport.appendChild(renderer.domElement);
 
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const roomEnvironment = new RoomEnvironment();
-  scene.environment = pmrem.fromScene(roomEnvironment, 0.05).texture;
-  roomEnvironment.dispose();
-  pmrem.dispose();
+  // No SSAO / post-processing and no bright HDR room environment:
+  // this is intentionally the stable iPhone/Safari path.
+  scene.environment = null;
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -71,28 +74,27 @@ function initThree() {
   controls.screenSpacePanning = true;
   controls.rotateSpeed = 0.65;
   controls.zoomSpeed = 0.85;
-  controls.minZoom = 0.55;
-  controls.maxZoom = 4.0;
-  controls.minPolarAngle = Math.PI * 0.18;
+  controls.minPolarAngle = Math.PI * 0.15;
   controls.maxPolarAngle = Math.PI * 0.49;
-  controls.target.set(5, 1, -3);
 
-  scene.add(new THREE.HemisphereLight(0xfff8ec, 0xa69d92, 0.82));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.055));
+  // Soft sky light. Kept deliberately low so wall/floor corners retain depth.
+  scene.add(new THREE.HemisphereLight(0xf8fbff, 0x9e9589, 0.58));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.06));
 
-  sunLight = new THREE.DirectionalLight(0xffedc8, 1.55);
-  sunLight.position.set(10, 16, 9);
+  // Direct sun; its actual position is set after the model bounds are known.
+  sunLight = new THREE.DirectionalLight(0xffdfae, 2.35);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
-  sunLight.shadow.radius = 5;
-  sunLight.shadow.bias = -0.00008;
-  sunLight.target.position.set(5, 0, -3);
+  sunLight.shadow.radius = 3;
+  sunLight.shadow.bias = -0.00005;
+  sunLight.shadow.normalBias = 0.018;
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xdfe8f2, 0.16);
-  fill.position.set(-8, 7, -10);
-  scene.add(fill);
+  // Weak cool sky bounce from the opposite side.
+  const skyBounce = new THREE.DirectionalLight(0xd9e4f0, 0.14);
+  skyBounce.position.set(7, 6, -9);
+  scene.add(skyBounce);
 
   stagingRoot = new THREE.Group();
   scene.add(stagingRoot);
@@ -104,6 +106,7 @@ function initThree() {
 
   window.addEventListener('resize', resize);
   resize();
+
   renderer.setAnimationLoop(() => {
     controls.update();
     renderer.render(scene, camera);
@@ -113,14 +116,9 @@ function initThree() {
 function resize() {
   const w = Math.max(1, viewport.clientWidth);
   const h = Math.max(1, viewport.clientHeight);
-  const aspect = w / h;
 
-  camera.left = -orthoSize * aspect * 0.5;
-  camera.right = orthoSize * aspect * 0.5;
-  camera.top = orthoSize * 0.5;
-  camera.bottom = -orthoSize * 0.5;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-
   renderer.setSize(w, h, false);
 }
 
@@ -389,7 +387,7 @@ function ensurePlanarUV(geometry, scale = 0.7) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
-function styleNordicMaterial(material, mesh) {
+function stylePhotorealMaterial(material, mesh) {
   if (!material) return;
 
   const name = (material.name || '').toLowerCase();
@@ -399,14 +397,14 @@ function styleNordicMaterial(material, mesh) {
   material.roughness = 0.82;
 
   if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
-    setColor(0xbecbc8);
+    setColor(0xc7d2d1);
     material.transparent = true;
-    material.opacity = name.includes('railing') ? 0.36 : 0.30;
+    material.opacity = name.includes('railing') ? 0.32 : 0.24;
     material.roughness = 0.18;
     material.metalness = 0;
     material.depthWrite = false;
   } else if (name.includes('glass railing color')) {
-    setColor(0x77827f);
+    setColor(0x596361);
     material.roughness = 0.42;
     material.metalness = 0.34;
   } else if (
@@ -416,7 +414,7 @@ function styleNordicMaterial(material, mesh) {
     name.includes('steel') ||
     name.includes('shower')
   ) {
-    setColor(0x454a48);
+    setColor(0x4a4f4e);
     material.metalness = 0.52;
     material.roughness = 0.36;
   } else if (
@@ -426,20 +424,20 @@ function styleNordicMaterial(material, mesh) {
     name.includes('1014065') ||
     name.includes('1620856')
   ) {
-    setColor(0xbc8d58);
+    setColor(0xb58b5d);
     material.metalness = 0;
     material.roughness = 0.78;
 
     if (name.includes('000__wood__matte')) {
       ensurePlanarUV(mesh.geometry, 0.66);
       material.map = nordicWoodTexture;
-      material.color.setHex(0xd2b181);
+      material.color.setHex(0xc9a879);
     }
   } else if (name.includes('瓷砖 47')) {
-    setColor(0xc4bdb4);
+    setColor(0xbdb7af);
     material.roughness = 0.92;
   } else if (name.includes('瓷砖')) {
-    setColor(0xd1cbc2);
+    setColor(0xcec8bf);
     material.roughness = 0.88;
   } else if (
     name.includes('color m07') ||
@@ -450,20 +448,20 @@ function styleNordicMaterial(material, mesh) {
     setColor(0x404442);
     material.roughness = 0.62;
   } else if (name.includes('plastic') || name.includes('塑料')) {
-    setColor(0xd5cec5);
+    setColor(0xd1cbc2);
     material.roughness = 0.78;
   } else {
-    setColor(0xd8d1c8);
+    setColor(0xd2ccc4);
     material.metalness = 0;
     material.roughness = 0.9;
   }
 
-  if ('envMapIntensity' in material) material.envMapIntensity = 0.28;
+  if ('envMapIntensity' in material) material.envMapIntensity = 0.0;
   material.side = THREE.DoubleSide;
   material.needsUpdate = true;
 }
 
-function applyNordicStyle(root) {
+function applyPhotorealStyle(root) {
   const styled = new Set();
 
   root.traverse(obj => {
@@ -475,166 +473,13 @@ function applyNordicStyle(root) {
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     mats.filter(Boolean).forEach(mat => {
       if (!styled.has(mat.uuid)) {
-        styleNordicMaterial(mat, obj);
+        stylePhotorealMaterial(mat, obj);
         styled.add(mat.uuid);
       } else if ((mat.name || '').toLowerCase().includes('000__wood__matte')) {
         ensurePlanarUV(obj.geometry, 0.66);
       }
     });
   });
-}
-
-function roundedBox(w, h, d, material, x, y, z, rotY = 0) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, y, z);
-  mesh.rotation.y = rotY;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-function addBed(parent, x, z, rotation = 0) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = rotation;
-
-  const wood = new THREE.MeshStandardMaterial({ color: 0xbf9260, roughness: 0.82 });
-  const fabric = new THREE.MeshStandardMaterial({ color: 0xe8dfd2, roughness: 0.96 });
-  const sheet = new THREE.MeshStandardMaterial({ color: 0xd8cdbc, roughness: 0.98 });
-  const accent = new THREE.MeshStandardMaterial({ color: 0x758464, roughness: 0.94 });
-
-  g.add(roundedBox(1.7, 0.20, 2.05, wood, 0, 0.12, 0));
-  g.add(roundedBox(1.62, 0.23, 1.92, fabric, 0, 0.31, 0.02));
-  g.add(roundedBox(1.58, 0.12, 1.25, sheet, 0, 0.49, 0.28));
-  g.add(roundedBox(1.72, 0.78, 0.10, wood, 0, 0.55, -1.00));
-  g.add(roundedBox(0.58, 0.13, 0.38, fabric, -0.36, 0.54, -0.62));
-  g.add(roundedBox(0.58, 0.13, 0.38, fabric, 0.36, 0.54, -0.62));
-  g.add(roundedBox(0.38, 0.12, 0.34, accent, 0.10, 0.58, -0.36));
-
-  parent.add(g);
-}
-
-function addSofa(parent, x, z, rotation = 0) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = rotation;
-
-  const fabric = new THREE.MeshStandardMaterial({ color: 0xd8d0c5, roughness: 0.96 });
-  const light = new THREE.MeshStandardMaterial({ color: 0xeee8df, roughness: 0.98 });
-  const green = new THREE.MeshStandardMaterial({ color: 0x6f7f63, roughness: 0.94 });
-
-  g.add(roundedBox(2.20, 0.34, 0.88, fabric, 0, 0.28, 0));
-  g.add(roundedBox(2.18, 0.68, 0.18, fabric, 0, 0.68, -0.36));
-  g.add(roundedBox(0.18, 0.54, 0.88, fabric, -1.02, 0.52, 0));
-  g.add(roundedBox(0.18, 0.54, 0.88, fabric, 1.02, 0.52, 0));
-  g.add(roundedBox(0.58, 0.16, 0.60, light, -0.67, 0.52, 0.02));
-  g.add(roundedBox(0.58, 0.16, 0.60, light, 0, 0.52, 0.02));
-  g.add(roundedBox(0.58, 0.16, 0.60, light, 0.67, 0.52, 0.02));
-  g.add(roundedBox(0.38, 0.13, 0.38, green, 0.52, 0.78, -0.20));
-
-  parent.add(g);
-}
-
-function addCoffeeTable(parent, x, z) {
-  const wood = new THREE.MeshStandardMaterial({ color: 0xba8d5d, roughness: 0.78 });
-  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.055, 40), wood);
-  top.position.set(x, 0.40, z);
-  top.castShadow = true;
-  top.receiveShadow = true;
-  parent.add(top);
-
-  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, 0.38, 16), wood);
-  leg.position.set(x, 0.19, z);
-  leg.castShadow = true;
-  parent.add(leg);
-}
-
-function addDiningSet(parent, x, z) {
-  const wood = new THREE.MeshStandardMaterial({ color: 0xb98956, roughness: 0.82 });
-  parent.add(roundedBox(1.34, 0.075, 0.78, wood, x, 0.74, z));
-
-  const legPositions = [
-    [-0.53, -0.25], [0.53, -0.25], [-0.53, 0.25], [0.53, 0.25]
-  ];
-  legPositions.forEach(([dx, dz]) => {
-    parent.add(roundedBox(0.07, 0.72, 0.07, wood, x + dx, 0.36, z + dz));
-  });
-
-  const chairPositions = [
-    [x - 0.48, z - 0.72, 0],
-    [x + 0.48, z - 0.72, 0],
-    [x - 0.48, z + 0.72, Math.PI],
-    [x + 0.48, z + 0.72, Math.PI]
-  ];
-
-  chairPositions.forEach(([cx, cz, r]) => {
-    const c = new THREE.Group();
-    c.position.set(cx, 0, cz);
-    c.rotation.y = r;
-    c.add(roundedBox(0.42, 0.06, 0.42, wood, 0, 0.46, 0));
-    c.add(roundedBox(0.42, 0.58, 0.06, wood, 0, 0.72, 0.18));
-    c.add(roundedBox(0.05, 0.46, 0.05, wood, -0.15, 0.23, -0.14));
-    c.add(roundedBox(0.05, 0.46, 0.05, wood, 0.15, 0.23, -0.14));
-    parent.add(c);
-  });
-}
-
-function addPlant(parent, x, z, scale = 1) {
-  const potMat = new THREE.MeshStandardMaterial({ color: 0xbeb4a7, roughness: 0.9 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x5f7256, roughness: 0.86 });
-
-  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * scale, 0.14 * scale, 0.28 * scale, 24), potMat);
-  pot.position.set(x, 0.14 * scale, z);
-  pot.castShadow = true;
-  pot.receiveShadow = true;
-  parent.add(pot);
-
-  for (let i = 0; i < 7; i++) {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.14 * scale, 18, 12), leafMat);
-    const angle = (i / 7) * Math.PI * 2;
-    leaf.scale.set(0.62, 1.8, 0.42);
-    leaf.rotation.z = (i % 2 ? 1 : -1) * 0.48;
-    leaf.position.set(
-      x + Math.cos(angle) * 0.16 * scale,
-      0.46 * scale + (i % 3) * 0.08 * scale,
-      z + Math.sin(angle) * 0.16 * scale
-    );
-    leaf.castShadow = true;
-    parent.add(leaf);
-  }
-}
-
-function addNordicFurniture(parent) {
-  const decor = new THREE.Group();
-  decor.name = 'Nordic_Staging';
-
-  const rugMat = new THREE.MeshStandardMaterial({
-    color: 0xdcd3c6,
-    roughness: 1,
-    side: THREE.DoubleSide
-  });
-  const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 2.25), rugMat);
-  rug.rotation.x = -Math.PI / 2;
-  rug.position.set(4.75, 0.022, -3.85);
-  rug.receiveShadow = true;
-  decor.add(rug);
-
-  addSofa(decor, 4.65, -4.55, 0);
-  addCoffeeTable(decor, 4.70, -3.48);
-  addDiningSet(decor, 6.62, -4.60);
-  addBed(decor, 1.55, -3.03, 0);
-  addBed(decor, 9.50, -4.55, 0);
-  addPlant(decor, 3.58, -5.62, 0.95);
-  addPlant(decor, 7.28, -3.00, 0.78);
-
-  decor.traverse(obj => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-    }
-  });
-
-  parent.add(decor);
 }
 
 function updatePresentationGround(box) {
@@ -646,34 +491,48 @@ function updatePresentationGround(box) {
 
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
-  const extent = Math.max(size.x, size.z) * 2.15;
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const extent = Math.max(size.x, size.z) * 2.2;
 
+  // Neutral studio ground which only carries the building shadow.
   const shadow = new THREE.Mesh(
     new THREE.PlaneGeometry(extent, extent),
     new THREE.ShadowMaterial({
-      color: 0x8f887d,
+      color: 0x5f574e,
       transparent: true,
-      opacity: 0.18
+      opacity: 0.20
     })
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.set(center.x, box.min.y - 0.018, center.z);
+  shadow.position.set(center.x, box.min.y - 0.012, center.z);
   shadow.receiveShadow = true;
   stagingRoot.add(shadow);
 
-  const maxDim = Math.max(size.x, size.y, size.z);
-  sunLight.position.set(
-    center.x + maxDim * 0.8,
-    center.y + maxDim * 1.35,
-    center.z + maxDim * 0.65
+  // Main facade (+Z in this model) is defined as geographic NW, azimuth 315 deg.
+  // For the default presentation use an autumn-afternoon sun at azimuth 245 deg.
+  // That means the sunlight reaches the NW facade obliquely from its left side,
+  // which is consistent with a SE-sitting / NW-facing apartment.
+  const relativeAzimuth = THREE.MathUtils.degToRad(
+    SHOWCASE_SUN_AZIMUTH_DEG - BUILDING_FACING_AZIMUTH_DEG
   );
-  sunLight.target.position.copy(center);
-  sunLight.shadow.camera.left = -maxDim;
-  sunLight.shadow.camera.right = maxDim;
-  sunLight.shadow.camera.top = maxDim;
-  sunLight.shadow.camera.bottom = -maxDim;
+  const elevation = THREE.MathUtils.degToRad(SHOWCASE_SUN_ELEVATION_DEG);
+  const sunDistance = maxDim * 2.8;
+  const horizontal = Math.cos(elevation) * sunDistance;
+
+  sunLight.position.set(
+    center.x + Math.sin(relativeAzimuth) * horizontal,
+    center.y + Math.sin(elevation) * sunDistance,
+    center.z + Math.cos(relativeAzimuth) * horizontal
+  );
+  sunLight.target.position.set(center.x, center.y * 0.55, center.z);
+
+  const shadowRange = maxDim * 0.9;
+  sunLight.shadow.camera.left = -shadowRange;
+  sunLight.shadow.camera.right = shadowRange;
+  sunLight.shadow.camera.top = shadowRange;
+  sunLight.shadow.camera.bottom = -shadowRange;
   sunLight.shadow.camera.near = 0.1;
-  sunLight.shadow.camera.far = maxDim * 4;
+  sunLight.shadow.camera.far = sunDistance * 2.2;
   sunLight.shadow.camera.updateProjectionMatrix();
 }
 
@@ -703,25 +562,20 @@ function fitCamera() {
   if (box.isEmpty()) return;
 
   const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
   const sphere = box.getBoundingSphere(new THREE.Sphere());
-  const aspect = Math.max(0.35, viewport.clientWidth / Math.max(1, viewport.clientHeight));
+  const fov = THREE.MathUtils.degToRad(camera.fov);
+  const distance = (sphere.radius / Math.sin(fov * 0.5)) * 1.08;
 
-  orthoSize = Math.max(
-    sphere.radius * 2.45,
-    size.y * 3.0,
-    size.x * 1.18 / Math.min(aspect, 1)
-  );
-
-  const distance = Math.max(18, sphere.radius * 3.1);
-  const viewDir = new THREE.Vector3(1, 0.82, 1).normalize();
+  // Elevated three-quarter architectural view, but with perspective depth.
+  const viewDir = new THREE.Vector3(1.0, 0.78, 1.08).normalize();
   camera.position.copy(center).addScaledVector(viewDir, distance);
-  camera.near = 0.01;
-  camera.far = distance * 8;
-  camera.zoom = 1;
-  controls.target.copy(center);
-  resize();
+  camera.near = Math.max(0.02, distance / 1000);
+  camera.far = distance * 10;
   camera.updateProjectionMatrix();
+
+  controls.target.copy(center);
+  controls.minDistance = distance * 0.35;
+  controls.maxDistance = distance * 4.0;
   controls.update();
 
   updatePresentationGround(box);
@@ -772,7 +626,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-1545-1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-empty-photoreal-1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -814,18 +668,17 @@ async function tryAutoLoadRepoModel() {
       if (obj.isMesh) meshCount += 1;
     });
 
-    applyNordicStyle(gltf.scene);
+    applyPhotorealStyle(gltf.scene);
     modelRoot.add(gltf.scene);
-    addNordicFurniture(modelRoot);
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
     exportBtn.disabled = false;
 
-    modeBadge.textContent = '北歐等角 3D';
+    modeBadge.textContent = '空屋擬真 · 西北向';
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · 北歐 / Japandi 即時 3D 已載入');
+    setStatus('1004 · 空屋擬真 · 坐東南向西北 · ' + SHOWCASE_TIME_LABEL + ' 日照');
     fitCamera();
   } catch (error) {
     console.error(error);
