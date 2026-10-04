@@ -637,34 +637,68 @@ function replaceLivingRoomW3(root) {
   // which made the window look like an empty opening. Here the sash nearly
   // fills its framed cell and the glass sits clearly inside the black profile.
   function addOperableSash(x0, x1) {
-    const inset = 0.018;
-    const sashBar = 0.052;
-    const glazingBead = 0.016;
-    const sashDepth = 0.118;
+    // No visible reveal. The sash overlaps the cell perimeter slightly so the
+    // facade reads as one continuous black aluminum assembly.
+    const overlap = 0.012;
+    const sashBar = 0.070;
+    const glazingBead = 0.018;
+    const sashDepth = 0.128;
+    const sashZ = centerZ + 0.028;
 
-    const sx0 = x0 + inset;
-    const sx1 = x1 - inset;
-    const sy0 = upperY0 + inset;
-    const sy1 = upperY1 - inset;
+    const sx0 = x0 - overlap;
+    const sx1 = x1 + overlap;
+    const sy0 = upperY0 - overlap;
+    const sy1 = upperY1 + overlap;
 
-    // Main sash profile: substantial black aluminum on all four sides.
-    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy0 + sashBar / 2, sashDepth, sashMat);
-    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy1 - sashBar / 2, sashDepth, sashMat);
-    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx0 + sashBar / 2, (sy0 + sy1) / 2, sashDepth, sashMat);
-    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx1 - sashBar / 2, (sy0 + sy1) / 2, sashDepth, sashMat);
+    function addSashBar(w, h, x, y, depth = sashDepth) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, depth),
+        sashMat
+      );
+      mesh.position.set(x, y, sashZ);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      return mesh;
+    }
 
-    // Glazing sits inside the sash, not in the surrounding reveal.
+    // Full black sash perimeter. These bars deliberately cover the previous
+    // white/translucent installation gap.
+    addSashBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy0 + sashBar / 2);
+    addSashBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy1 - sashBar / 2);
+    addSashBar(sashBar, sy1 - sy0 - sashBar * 2, sx0 + sashBar / 2, (sy0 + sy1) / 2);
+    addSashBar(sashBar, sy1 - sy0 - sashBar * 2, sx1 - sashBar / 2, (sy0 + sy1) / 2);
+
+    // Glass exists only inside the black sash.
     const gx0 = sx0 + sashBar;
     const gx1 = sx1 - sashBar;
     const gy0 = sy0 + sashBar;
     const gy1 = sy1 - sashBar;
-    addGlass(gx0 + glazingBead, gx1 - glazingBead, gy0 + glazingBead, gy1 - glazingBead);
 
-    // Thin inner glazing bead gives the black frame a layered aluminum-window profile.
-    addFrameBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy0 + glazingBead / 2, 0.090, sashMat);
-    addFrameBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy1 - glazingBead / 2, 0.090, sashMat);
-    addFrameBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx0 + glazingBead / 2, (gy0 + gy1) / 2, 0.090, sashMat);
-    addFrameBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx1 - glazingBead / 2, (gy0 + gy1) / 2, 0.090, sashMat);
+    const glassPad = 0.006;
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        Math.max(0.01, gx1 - gx0 - glassPad * 2),
+        Math.max(0.01, gy1 - gy0 - glassPad * 2),
+        glassDepth
+      ),
+      glassMat
+    );
+    glass.position.set(
+      (gx0 + gx1) / 2,
+      (gy0 + gy1) / 2,
+      sashZ + 0.010
+    );
+    glass.castShadow = false;
+    glass.receiveShadow = true;
+    glass.renderOrder = 2;
+    group.add(glass);
+
+    // Inner black glazing bead, also placed forward with the sash.
+    addSashBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy0 + glazingBead / 2, 0.098);
+    addSashBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy1 - glazingBead / 2, 0.098);
+    addSashBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx0 + glazingBead / 2, (gy0 + gy1) / 2, 0.098);
+    addSashBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx1 - glazingBead / 2, (gy0 + gy1) / 2, 0.098);
   }
 
   addOperableSash(colBounds[0][0], colBounds[0][1]);
@@ -997,7 +1031,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-black-sash-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-flush-black-sash-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1051,7 +1085,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · W3 268×190 cm · 上排左右黑框窗扇已修正');
+    setStatus('1004 · W3 上排左右黑框窗扇 · 已取消簍空縫');
     fitCamera();
   } catch (error) {
     console.error(error);
