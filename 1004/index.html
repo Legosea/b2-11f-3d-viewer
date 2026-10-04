@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#f6f3ed" />
   <title>1004 Empty Interior · Three.js</title>
-  <link rel="stylesheet" href="./styles.css?v=20261004-woodgrain-threeviews-v2" />
+  <link rel="stylesheet" href="./styles.css?v=20261004-centro-fridge-library-v1" />
   <script type="importmap">
     {
       "imports": {
@@ -22,7 +22,7 @@
     <header class="topbar">
       <div>
         <h1>1004 · Empty Interior 3D</h1>
-        <p>室內配置 · 木紋材質 + 三視圖 + 元件庫</p>
+        <p>室內配置 · CENTRO 廚具 + NR-F552YT + 元件庫</p>
       </div>
       <div class="actions">
         <button id="fitBtn" class="button" disabled>置中</button>
@@ -58,6 +58,7 @@
 
         <div class="library-tabs">
           <button class="library-tab active" data-library-tab="appliances">家電</button>
+          <button class="library-tab" data-library-tab="kitchens">廚具</button>
           <button class="library-tab" data-library-tab="furniture">家具</button>
           <button class="library-tab" data-library-tab="materials">材質</button>
         </div>
@@ -87,6 +88,69 @@
             </div>
 
             <button id="addWasherBtn" class="button primary catalog-action">放置 / 選取</button>
+          </article>
+
+          <article class="catalog-card catalog-card-spaced">
+            <div class="catalog-product">
+              <div class="catalog-icon fridge-icon">
+                <span></span>
+              </div>
+              <div>
+                <strong>Panasonic NR-F552YT</strong>
+                <small>650 × 699 × 1850 mm · 545 L</small>
+              </div>
+            </div>
+
+            <div class="library-label">官方色</div>
+            <div class="swatch-row">
+              <button class="swatch-option" data-fridge-variant="s1-silver">
+                <span class="swatch" style="--swatch:#b5b8bb"></span>
+                星礦銀 S1
+              </button>
+              <button class="swatch-option" data-fridge-variant="c1-beige-gray">
+                <span class="swatch" style="--swatch:#c8bfb3"></span>
+                淺灰米 C1
+              </button>
+              <button class="swatch-option" data-fridge-variant="w1-frost-white">
+                <span class="swatch" style="--swatch:#ebe9e3"></span>
+                凝霜白 W1
+              </button>
+            </div>
+
+            <button id="addFridgeBtn" class="button primary catalog-action">放置 / 選取</button>
+          </article>
+        </section>
+
+        <section class="library-section hidden" data-library-section="kitchens">
+          <article class="catalog-card">
+            <div class="catalog-product">
+              <div class="catalog-icon kitchen-icon">
+                <span></span>
+              </div>
+              <div>
+                <strong>Cleanup CENTRO</strong>
+                <small>一字型 207 cm · 預留 NR-F552YT 冰箱位</small>
+              </div>
+            </div>
+
+            <div class="library-label">門板配色</div>
+            <div class="swatch-grid">
+              <button class="material-swatch" data-kitchen-variant="ar8-raster-silver">
+                <span class="swatch" style="--swatch:#aeb2b4"></span><span>AR8 光柵銀</span>
+              </button>
+              <button class="material-swatch" data-kitchen-variant="cpb-wood">
+                <span class="swatch wood-swatch cpb"></span><span>CPB 木紋</span>
+              </button>
+              <button class="material-swatch" data-kitchen-variant="ak6-stainless">
+                <span class="swatch" style="--swatch:#c4c7c7"></span><span>AK6 銀白不鏽鋼</span>
+              </button>
+            </div>
+
+            <p class="catalog-note">
+              客廳牆面採 207 cm 一字型配置，右側保留約 70 cm 冰箱帶。
+            </p>
+
+            <button id="addKitchenBtn" class="button primary catalog-action">放置 / 還原</button>
           </article>
         </section>
 
@@ -160,6 +224,6 @@
     </footer>
   </div>
 
-  <script type="module" src="./app.js?v=20261004-woodgrain-threeviews-v2"></script>
+  <script type="module" src="./app.js?v=20261004-centro-fridge-library-v1"></script>
 </body>
 </html>
