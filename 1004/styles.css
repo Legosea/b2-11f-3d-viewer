@@ -1,0 +1,51 @@
+:root{
+  color-scheme:dark;
+  --bg:#0d0f13;--panel:#151820;--panel2:#1b1f29;--line:#2b313d;
+  --text:#eef2f8;--muted:#97a1b1;--accent:#5f8cff;--danger:#ff6b6b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif}
+button,input{font:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;
+  background:rgba(21,24,32,.96);border-bottom:1px solid var(--line);z-index:10}
+.topbar h1{margin:0;font-size:17px;font-weight:700}
+.topbar p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.button{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:9px;padding:8px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.button:hover:not(:disabled){border-color:#52617a;background:#222836}
+.button:disabled{opacity:.4;cursor:not-allowed}
+.button.primary{background:var(--accent);border-color:var(--accent);color:white;font-weight:600}
+.button.big{padding:11px 18px}
+.viewer{position:relative;min-height:0;background:radial-gradient(circle at 50% 30%,#202632 0,#0f1116 62%)}
+#viewport{position:absolute;inset:0}
+#viewport canvas{display:block;width:100%;height:100%;touch-action:none}
+.welcome,.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:4}
+.welcome{pointer-events:none}
+.drop-card{pointer-events:auto;width:min(520px,calc(100vw - 34px));text-align:center;padding:28px;border:1px solid var(--line);
+  border-radius:18px;background:rgba(20,24,31,.9);backdrop-filter:blur(14px);box-shadow:0 22px 70px #0008}
+.drop-card.drag{border-color:var(--accent);box-shadow:0 0 0 2px #5f8cff45,0 22px 70px #0008}
+.drop-card .icon{margin:0 auto 12px;width:58px;height:58px;border-radius:16px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#5f8cff,#8b6dff);font-weight:800;letter-spacing:.04em}
+.drop-card h2{margin:0 0 8px;font-size:22px}
+.drop-card p{margin:0 auto 18px;color:var(--muted);font-size:13px;line-height:1.65;max-width:430px}
+.drop-card small{display:block;margin-top:14px;color:#7f8999;font-size:11px}
+.loading{background:#0d0f13d9;flex-direction:column;gap:10px;text-align:center;padding:20px}
+.hidden{display:none!important}
+.spinner{width:34px;height:34px;border:3px solid #303744;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingTitle{font-weight:700}
+#loadingDetail{color:var(--muted);font-size:12px;max-width:540px}
+.hud{position:absolute;left:12px;bottom:12px;display:flex;gap:8px;z-index:3;pointer-events:none}
+.hud span{background:#11151dd9;border:1px solid #2b313d;padding:6px 9px;border-radius:8px;color:#cbd3df;font-size:11px;
+  backdrop-filter:blur(6px)}
+.statusbar{display:flex;justify-content:space-between;gap:16px;padding:7px 12px;background:var(--panel);
+  border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.statusbar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:720px){
+  .topbar{align-items:flex-start;padding:10px 11px}.topbar p{display:none}.actions{justify-content:flex-end}
+  .button{padding:7px 9px;font-size:12px}.topbar h1{font-size:14px}
+  .statusbar span:last-child{display:none}.drop-card{padding:22px 17px}.drop-card h2{font-size:19px}
+}
