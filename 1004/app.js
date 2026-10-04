@@ -74,6 +74,15 @@ const COMPONENT_LIBRARY = Object.freeze({
       depthMm: 970,
       heightMm: 1040,
       widthRangeMm: [2100, 2520]
+    },
+    {
+      id: 'w3-window-daybed',
+      brand: 'Built-in',
+      model: 'W3 Window Daybed',
+      label: 'W3 窗邊臥榻',
+      widthMm: 2660,
+      depthMm: 620,
+      heightMm: 440
     }
   ]
 });
@@ -178,6 +187,16 @@ const SOFA_DEFAULT_STATE = Object.freeze({
   z: -3.30,
   rotationY: 0,
   widthPreset: '210'
+});
+
+const DAYBED_STORAGE_KEY = 'b2-11f-1004.w3-window-daybed.v1';
+
+const DAYBED_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 4.553215,
+  y: 0,
+  z: -0.945,
+  rotationY: 0
 });
 
 const CENTRO_VARIANTS = Object.freeze({
@@ -296,6 +315,7 @@ const kitchenCountertopButtons = [...document.querySelectorAll('[data-kitchen-co
 const dishwasherToggleBtn = document.getElementById('dishwasherToggleBtn');
 const addSofaBtn = document.getElementById('addSofaBtn');
 const sofaWidthButtons = [...document.querySelectorAll('[data-sofa-width]')];
+const addDaybedBtn = document.getElementById('addDaybedBtn');
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -625,6 +645,24 @@ function bindUI() {
     editableRoot.add(sofa);
     saveSofaState(sofa);
     selectEditable(sofa);
+    syncLibraryUI();
+  });
+
+  addDaybedBtn?.addEventListener('click', () => {
+    const existing = getCurrentDaybed();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('W3 窗邊臥榻已存在 · 已選取');
+      return;
+    }
+
+    const saved = readDaybedState();
+    const state = saved ? { ...saved, exists: true } : DAYBED_DEFAULT_STATE;
+    const daybed = createW3WindowDaybed();
+    applyDaybedState(daybed, state);
+    editableRoot.add(daybed);
+    saveDaybedState(daybed);
+    selectEditable(daybed);
     syncLibraryUI();
   });
 
@@ -1979,7 +2017,96 @@ function saveEditableState(object) {
     return saveSofaState(object);
   }
 
+  if (object.userData?.componentId === 'w3-window-daybed') {
+    return saveDaybedState(object);
+  }
+
   return false;
+}
+
+function readDaybedState() {
+  try {
+    const raw = localStorage.getItem(DAYBED_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : DAYBED_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : DAYBED_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : DAYBED_DEFAULT_STATE.rotationY
+    };
+  } catch (error) {
+    console.warn('Unable to read W3 daybed state.', error);
+    return null;
+  }
+}
+
+function writeDaybedState(state) {
+  try {
+    localStorage.setItem(DAYBED_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY)
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist W3 daybed state.', error);
+    return false;
+  }
+}
+
+function saveDaybedState(daybed) {
+  if (!daybed) return false;
+
+  const saved = writeDaybedState({
+    exists: true,
+    x: daybed.position.x,
+    y: 0,
+    z: daybed.position.z,
+    rotationY: daybed.rotation.y
+  });
+
+  if (saved) daybed.userData.hasSavedPlacement = true;
+  return saved;
+}
+
+function saveDaybedDeletedState() {
+  const current = readDaybedState() || DAYBED_DEFAULT_STATE;
+  return writeDaybedState({ ...current, exists: false });
+}
+
+function getCurrentDaybed() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'w3-window-daybed'
+  ) || null;
+}
+
+function applyDaybedState(daybed, state) {
+  const next = state || DAYBED_DEFAULT_STATE;
+  daybed.position.set(next.x, 0, next.z);
+  daybed.rotation.set(0, next.rotationY, 0);
+  daybed.userData.floorY = 0;
+  daybed.userData.hasSavedPlacement = Boolean(state);
+}
+
+function restoreOrCreateDaybed() {
+  const saved = readDaybedState();
+  if (saved?.exists === false) return null;
+
+  const daybed = createW3WindowDaybed();
+  applyDaybedState(daybed, saved || DAYBED_DEFAULT_STATE);
+  editableRoot.add(daybed);
+
+  if (!saved) saveDaybedState(daybed);
+  return daybed;
 }
 
 function readSofaState() {
@@ -3089,6 +3216,244 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
+function createW3WindowDaybed() {
+  // Built-in window daybed aligned to the corrected W3 opening:
+  // W3 = 268 cm wide, sill = 50 cm above finished floor.
+  // Daybed is kept just inside that width and below the sill.
+  const width = 2.66;
+  const depth = 0.62;
+  const totalHeight = 0.44;
+
+  const group = new THREE.Group();
+  group.name = 'W3_Window_Daybed';
+  group.userData.editable = true;
+  group.userData.componentId = 'w3-window-daybed';
+  group.userData.label = 'W3 窗邊臥榻';
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+  group.userData.productSize = {
+    width,
+    depth,
+    height: totalHeight
+  };
+
+  const whiteCabinetMat = new THREE.MeshStandardMaterial({
+    color: 0xf1f0eb,
+    roughness: 0.78,
+    metalness: 0
+  });
+
+  const panelShadowMat = new THREE.MeshStandardMaterial({
+    color: 0xb8b3aa,
+    roughness: 0.82,
+    metalness: 0
+  });
+
+  const oakMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.72,
+    metalness: 0,
+    map: getWoodTexture('light-oak', 'roomDoor')
+  });
+
+  const cushionBump = getSofaFabricBumpTexture();
+  const cushionMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe3ded4,
+    roughness: 0.91,
+    metalness: 0,
+    sheen: 0.12,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.94,
+    bumpMap: cushionBump,
+    bumpScale: 0.0045
+  });
+
+  const pillowMatA = new THREE.MeshPhysicalMaterial({
+    color: 0xd5ccbd,
+    roughness: 0.93,
+    metalness: 0,
+    sheen: 0.10,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.96,
+    bumpMap: cushionBump,
+    bumpScale: 0.004
+  });
+
+  const pillowMatB = new THREE.MeshPhysicalMaterial({
+    color: 0xc6b7a5,
+    roughness: 0.94,
+    metalness: 0,
+    sheen: 0.08,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.97,
+    bumpMap: cushionBump,
+    bumpScale: 0.004
+  });
+
+  function roundedBox(w, h, d, radius, material, name='') {
+    const mesh = new THREE.Mesh(
+      new RoundedBoxGeometry(w, h, d, 4, radius),
+      material
+    );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = name;
+    group.add(mesh);
+    return mesh;
+  }
+
+  // White built-in storage base, slightly recessed at the toe kick.
+  const baseH = 0.335;
+  const base = roundedBox(
+    width,
+    baseH,
+    depth - 0.035,
+    0.018,
+    whiteCabinetMat,
+    'Daybed_storage_base'
+  );
+  base.position.set(0, baseH / 2, 0.012);
+
+  const toeKick = roundedBox(
+    width - 0.08,
+    0.070,
+    0.050,
+    0.010,
+    panelShadowMat,
+    'Daybed_toe_kick'
+  );
+  toeKick.position.set(0, 0.035, -depth / 2 + 0.012);
+
+  // Three subtle shaker-like storage fronts on the room-facing side (-Z).
+  const doorGap = 0.012;
+  const frontW = (width - doorGap * 4) / 3;
+  for (let i = 0; i < 3; i++) {
+    const x =
+      -width / 2 +
+      doorGap +
+      frontW / 2 +
+      i * (frontW + doorGap);
+
+    const front = roundedBox(
+      frontW,
+      0.235,
+      0.020,
+      0.008,
+      whiteCabinetMat,
+      'Daybed_storage_front_' + i
+    );
+    front.position.set(
+      x,
+      0.205,
+      -depth / 2 - 0.004
+    );
+
+    // Fine inset frame detail.
+    const railTop = roundedBox(
+      frontW - 0.065,
+      0.010,
+      0.008,
+      0.003,
+      panelShadowMat,
+      'Daybed_front_top_detail_' + i
+    );
+    railTop.position.set(
+      x,
+      0.285,
+      -depth / 2 - 0.016
+    );
+
+    const handle = roundedBox(
+      0.075,
+      0.010,
+      0.014,
+      0.004,
+      panelShadowMat,
+      'Daybed_handle_' + i
+    );
+    handle.position.set(
+      x,
+      0.252,
+      -depth / 2 - 0.024
+    );
+  }
+
+  // Warm oak slab, matching the reference built-in bench.
+  const oakTop = roundedBox(
+    width,
+    0.045,
+    depth,
+    0.014,
+    oakMat,
+    'Daybed_oak_top'
+  );
+  oakTop.position.set(0, baseH + 0.0225, 0);
+
+  // Thin oatmeal seat pad; leaves a small wood border visible.
+  const cushion = roundedBox(
+    width - 0.12,
+    0.055,
+    depth - 0.12,
+    0.028,
+    cushionMat,
+    'Daybed_seat_cushion'
+  );
+  cushion.position.set(
+    0,
+    baseH + 0.045 + 0.0275,
+    -0.008
+  );
+
+  // Two loose cushions gathered into the RIGHT corner, inspired by the photo.
+  const pillow1 = roundedBox(
+    0.43,
+    0.35,
+    0.13,
+    0.060,
+    pillowMatA,
+    'Daybed_pillow_large'
+  );
+  pillow1.position.set(
+    width / 2 - 0.36,
+    0.535,
+    depth / 2 - 0.105
+  );
+  pillow1.rotation.x = THREE.MathUtils.degToRad(-10);
+  pillow1.rotation.z = THREE.MathUtils.degToRad(5);
+
+  const pillow2 = roundedBox(
+    0.33,
+    0.30,
+    0.12,
+    0.055,
+    pillowMatB,
+    'Daybed_pillow_small'
+  );
+  pillow2.position.set(
+    width / 2 - 0.63,
+    0.505,
+    depth / 2 - 0.095
+  );
+  pillow2.rotation.x = THREE.MathUtils.degToRad(-9);
+  pillow2.rotation.z = THREE.MathUtils.degToRad(-6);
+
+  // Invisible proxy makes touch selection easy while collision bounds continue
+  // to use only visible geometry.
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 1.01, 0.67, depth * 1.03),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  pickProxy.position.y = 0.335;
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  return group;
+}
+
 function getSofaFabricBumpTexture() {
   if (sofaFabricBumpTexture) return sofaFabricBumpTexture;
 
@@ -3835,6 +4200,8 @@ function deleteSelectedEditable() {
     saveKitchenDeletedState();
   } else if (componentId === 'ija-reims-3seat') {
     saveSofaDeletedState();
+  } else if (componentId === 'w3-window-daybed') {
+    saveDaybedDeletedState();
   }
 
   objectToolbar?.classList.add('hidden');
@@ -4461,7 +4828,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-ija-reims-headrest-right-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-window-daybed-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -4514,6 +4881,7 @@ async function tryAutoLoadRepoModel() {
     const fridge = restoreOrCreateFridge();
     const washer = restoreOrCreateWasher();
     const sofa = restoreOrCreateSofa();
+    const daybed = restoreOrCreateDaybed();
     syncLibraryUI();
 
     welcome.classList.add('hidden');
@@ -4525,7 +4893,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + NR-F601WX + IJA Reims 三人沙發已配置 · 元件庫可調整'
+      '1004 · CENTRO + NR-F601WX + Reims 沙發 + W3 窗邊臥榻已配置'
     );
     fitCamera();
   } catch (error) {
