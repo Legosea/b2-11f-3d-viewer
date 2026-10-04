@@ -40,11 +40,11 @@ const COMPONENT_LIBRARY = Object.freeze({
       variants: ['black', 'white']
     },
     {
-      id: 'panasonic-nr-f552yt',
+      id: 'panasonic-nr-f601wx',
       brand: 'Panasonic',
-      model: 'NR-F552YT',
-      label: 'Panasonic NR-F552YT',
-      variants: ['s1-silver', 'c1-beige-gray', 'w1-frost-white']
+      model: 'NR-F601WX',
+      label: 'Panasonic NR-F601WX',
+      variants: ['x1-diamond-black', 's1-mist-gray', 'w1-jade-white']
     }
   ],
   kitchens: [
@@ -121,7 +121,8 @@ const MATERIAL_DEFAULT_STATE = Object.freeze({
 });
 
 const KITCHEN_STORAGE_KEY = 'b2-11f-1004.cleanup-centro.v1';
-const FRIDGE_STORAGE_KEY = 'b2-11f-1004.panasonic-nr-f552yt.v1';
+const FRIDGE_STORAGE_KEY = 'b2-11f-1004.panasonic-nr-f601wx.v1';
+const LEGACY_FRIDGE_STORAGE_KEY = 'b2-11f-1004.panasonic-nr-f601wx.v1';
 
 const KITCHEN_DEFAULT_STATE = Object.freeze({
   exists: true,
@@ -139,7 +140,7 @@ const FRIDGE_DEFAULT_STATE = Object.freeze({
   y: 0,
   z: -5.83,
   rotationY: 0,
-  variant: 's1-silver'
+  variant: 'w1-jade-white'
 });
 
 const CENTRO_VARIANTS = Object.freeze({
@@ -198,26 +199,26 @@ const CENTRO_COUNTERTOP_VARIANTS = Object.freeze({
 });
 
 const FRIDGE_VARIANTS = Object.freeze({
-  's1-silver': {
-    label: '星礦銀 S1',
-    color: 0xb5b8bb,
-    seam: 0x777b7d,
-    metalness: 0.42,
-    roughness: 0.34
+  'x1-diamond-black': {
+    label: '鑽石黑 X1',
+    color: 0x17191a,
+    seam: 0x4b4d4e,
+    metalness: 0.30,
+    roughness: 0.20
   },
-  'c1-beige-gray': {
-    label: '淺灰米 C1',
-    color: 0xc8bfb3,
-    seam: 0x9d968d,
-    metalness: 0.22,
-    roughness: 0.40
+  's1-mist-gray': {
+    label: '雲霧灰 S1',
+    color: 0xa9abad,
+    seam: 0x777a7c,
+    metalness: 0.24,
+    roughness: 0.24
   },
-  'w1-frost-white': {
-    label: '凝霜白 W1',
-    color: 0xebe9e3,
-    seam: 0xb8b7b2,
-    metalness: 0.14,
-    roughness: 0.42
+  'w1-jade-white': {
+    label: '翡翠白 W1',
+    color: 0xf0efeb,
+    seam: 0xbebdb8,
+    metalness: 0.10,
+    roughness: 0.22
   }
 });
 
@@ -482,7 +483,7 @@ function bindUI() {
     const existing = getCurrentFridge();
     if (existing) {
       selectEditable(existing);
-      setStatus('Panasonic NR-F552YT 已存在 · 已選取');
+      setStatus('Panasonic NR-F601WX 已存在 · 已選取');
       return;
     }
 
@@ -1372,12 +1373,33 @@ function restoreOrCreateKitchen() {
 
 function readSavedFridgeState() {
   try {
-    const raw = localStorage.getItem(FRIDGE_STORAGE_KEY);
+    let raw = localStorage.getItem(FRIDGE_STORAGE_KEY);
+
+    // One-time migration from the previous NR-F601WX component so the user's
+    // carefully adjusted position and rotation do not disappear.
+    let migratedFromLegacy = false;
+    if (!raw) {
+      raw = localStorage.getItem(LEGACY_FRIDGE_STORAGE_KEY);
+      migratedFromLegacy = Boolean(raw);
+    }
+
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
 
-    return {
+    const legacyVariantMap = {
+      's1-silver': 's1-mist-gray',
+      'c1-beige-gray': 's1-mist-gray',
+      'w1-frost-white': 'w1-jade-white'
+    };
+
+    const variant =
+      FRIDGE_VARIANTS[parsed.variant]
+        ? parsed.variant
+        : legacyVariantMap[parsed.variant] || FRIDGE_DEFAULT_STATE.variant;
+
+    const state = {
       exists: parsed.exists !== false,
       x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : FRIDGE_DEFAULT_STATE.x,
       y: 0,
@@ -1385,10 +1407,14 @@ function readSavedFridgeState() {
       rotationY: Number.isFinite(Number(parsed.rotationY))
         ? Number(parsed.rotationY)
         : FRIDGE_DEFAULT_STATE.rotationY,
-      variant: FRIDGE_VARIANTS[parsed.variant]
-        ? parsed.variant
-        : FRIDGE_DEFAULT_STATE.variant
+      variant
     };
+
+    if (migratedFromLegacy) {
+      localStorage.setItem(FRIDGE_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    return state;
   } catch (error) {
     console.warn('Unable to read fridge state.', error);
     return null;
@@ -1433,7 +1459,7 @@ function saveFridgeDeletedState() {
 
 function getCurrentFridge() {
   return editableRoot?.children.find(
-    child => child.userData?.componentId === 'panasonic-nr-f552yt'
+    child => child.userData?.componentId === 'panasonic-nr-f601wx'
   ) || null;
 }
 
@@ -1501,7 +1527,7 @@ function saveEditableState(object) {
     return saveWasherState(object);
   }
 
-  if (object.userData?.componentId === 'panasonic-nr-f552yt') {
+  if (object.userData?.componentId === 'panasonic-nr-f601wx') {
     return saveFridgeState(object);
   }
 
@@ -1991,7 +2017,7 @@ function setKitchenCountertopFromLibrary(countertopId) {
 }
 
 function createPanasonicFridge() {
-  // Panasonic NR-F552YT official overall size:
+  // Panasonic NR-F601WX official overall size:
   // W650 x D699 x H1850 mm.
   // Visual proportions follow the supplied product image:
   // 2 upper doors + 2 shallow mid drawers + 2 full-width lower drawers.
@@ -2000,18 +2026,20 @@ function createPanasonicFridge() {
   const height = 1.850;
 
   const group = new THREE.Group();
-  group.name = 'Panasonic_NR-F552YT';
+  group.name = 'Panasonic_NR-F601WX';
   group.userData.editable = true;
-  group.userData.componentId = 'panasonic-nr-f552yt';
-  group.userData.label = 'Panasonic NR-F552YT';
+  group.userData.componentId = 'panasonic-nr-f601wx';
+  group.userData.label = 'Panasonic NR-F601WX';
   group.userData.variant = FRIDGE_DEFAULT_STATE.variant;
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
 
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0xb5b8bb,
-    metalness: 0.42,
-    roughness: 0.34
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf0efeb,
+    metalness: 0.10,
+    roughness: 0.22,
+    clearcoat: 0.34,
+    clearcoatRoughness: 0.16
   });
 
   // Light, subtle seams — no heavy black framework.
@@ -2039,7 +2067,7 @@ function createPanasonicFridge() {
 
   const frontZ = depth / 2 + 0.010;
   const edge = 0.010;
-  const seam = 0.004;
+  const seam = 0.0025;
 
   function addPanel(w, h, x, y, name) {
     const panel = new THREE.Mesh(
@@ -2166,6 +2194,10 @@ function applyFridgeVariant(fridge, variantId, save = true) {
   bodyMat.color.setHex(variant.color);
   bodyMat.metalness = variant.metalness;
   bodyMat.roughness = variant.roughness;
+  if ('clearcoat' in bodyMat) {
+    bodyMat.clearcoat = 0.34;
+    bodyMat.clearcoatRoughness = 0.16;
+  }
   bodyMat.needsUpdate = true;
 
   if (seamMat) {
@@ -2202,7 +2234,7 @@ function setFridgeVariantFromLibrary(variantId) {
 
   applyFridgeVariant(fridge, variantId, true);
   selectEditable(fridge);
-  setStatus('Panasonic NR-F552YT · ' + FRIDGE_VARIANTS[variantId].label + ' · 已套用並記憶');
+  setStatus('Panasonic NR-F601WX · ' + FRIDGE_VARIANTS[variantId].label + ' · 已套用並記憶');
 }
 
 function createPanasonicWasher() {
@@ -2420,7 +2452,7 @@ function deleteSelectedEditable() {
 
   if (componentId === 'panasonic-na-v170rph') {
     saveWasherDeletedState();
-  } else if (componentId === 'panasonic-nr-f552yt') {
+  } else if (componentId === 'panasonic-nr-f601wx') {
     saveFridgeDeletedState();
   } else if (componentId === 'cleanup-centro-207') {
     saveKitchenDeletedState();
@@ -3049,7 +3081,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-editable-countertop-fridge-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-nr-f601wx-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -3110,7 +3142,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · Cleanup CENTRO + Panasonic NR-F552YT 已配置 · 元件庫可切換配色'
+      '1004 · Cleanup CENTRO + Panasonic NR-F601WX 已配置 · 元件庫可切換配色'
     );
     fitCamera();
   } catch (error) {
