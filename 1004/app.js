@@ -20,12 +20,68 @@ const WASHER_DEFAULT_STATE = Object.freeze({
   x: 7.47,
   y: 0,
   z: -1.47,
-  rotationY: 0
+  rotationY: 0,
+  variant: 'black'
 });
 
 const ROOM_ANGLE_SNAP_STEP = THREE.MathUtils.degToRad(90);
 const ROOM_ANGLE_MAGNET_THRESHOLD = THREE.MathUtils.degToRad(8);
 const ROOM_ANGLE_RELEASE_THRESHOLD = THREE.MathUtils.degToRad(15);
+
+const MATERIAL_STORAGE_KEY = 'b2-11f-1004.material-library.v1';
+
+const COMPONENT_LIBRARY = Object.freeze({
+  appliances: [
+    {
+      id: 'panasonic-na-v170rph',
+      brand: 'Panasonic',
+      model: 'NA-V170RPH',
+      label: 'Panasonic NA-V170RPH',
+      variants: ['black', 'white']
+    }
+  ],
+  furniture: []
+});
+
+const WASHER_VARIANTS = Object.freeze({
+  black: {
+    label: '夜幕黑',
+    body: 0x171819,
+    fascia: 0x131516,
+    control: 0x0b0d0e,
+    darkDetail: 0x111314,
+    trim: 0x555b60
+  },
+  white: {
+    label: '冰鑽白',
+    body: 0xe9e9e5,
+    fascia: 0xe4e4df,
+    control: 0x25282a,
+    darkDetail: 0x222426,
+    trim: 0x9da2a4
+  }
+});
+
+const MATERIAL_PRESETS = Object.freeze({
+  floor: {
+    'light-oak': { label: '淺橡木', color: 0xf0d8ad, roughness: 0.80, useTexture: true },
+    'natural-oak': { label: '自然橡木', color: 0xd1ae7b, roughness: 0.78, useTexture: true },
+    'warm-oak': { label: '暖橡木', color: 0xb98554, roughness: 0.78, useTexture: true },
+    'walnut': { label: '胡桃木', color: 0x76513a, roughness: 0.76, useTexture: true }
+  },
+  roomDoor: {
+    'matte-white': { label: '霧白', color: 0xe8e3db, roughness: 0.82, useTexture: false },
+    'light-oak': { label: '淺橡木', color: 0xd5b17d, roughness: 0.78, useTexture: true },
+    'natural-wood': { label: '自然木', color: 0xb78353, roughness: 0.78, useTexture: true },
+    'walnut': { label: '胡桃木', color: 0x6d4937, roughness: 0.76, useTexture: true },
+    'warm-gray': { label: '暖灰', color: 0x91897f, roughness: 0.84, useTexture: false }
+  }
+});
+
+const MATERIAL_DEFAULT_STATE = Object.freeze({
+  floor: 'natural-oak',
+  roomDoor: 'natural-wood'
+});
 
 const viewport = document.getElementById('viewport');
 const fileInput = document.getElementById('fileInput');
@@ -45,6 +101,14 @@ const objectToolbar = document.getElementById('objectToolbar');
 const moveObjectBtn = document.getElementById('moveObjectBtn');
 const rotateObjectBtn = document.getElementById('rotateObjectBtn');
 const deleteObjectBtn = document.getElementById('deleteObjectBtn');
+const libraryBtn = document.getElementById('libraryBtn');
+const componentLibraryEl = document.getElementById('componentLibrary');
+const libraryBackdrop = document.getElementById('libraryBackdrop');
+const closeLibraryBtn = document.getElementById('closeLibraryBtn');
+const libraryTabButtons = [...document.querySelectorAll('[data-library-tab]')];
+const librarySections = [...document.querySelectorAll('[data-library-section]')];
+const washerVariantButtons = [...document.querySelectorAll('[data-washer-variant]')];
+const materialPresetButtons = [...document.querySelectorAll('[data-material-scope][data-material-preset]')];
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -61,6 +125,10 @@ const editRaycaster = new THREE.Raycaster();
 const editPointer = new THREE.Vector2();
 let washerSerial = 0;
 let washerSaveTimer = null;
+const materialTargets = {
+  floor: new Set(),
+  roomDoor: new Set()
+};
 
 initThree();
 bindUI();
@@ -226,6 +294,31 @@ function bindUI() {
   moveObjectBtn?.addEventListener('click', () => setEditableMode('translate'));
   rotateObjectBtn?.addEventListener('click', () => setEditableMode('rotate'));
   deleteObjectBtn?.addEventListener('click', deleteSelectedEditable);
+
+  libraryBtn?.addEventListener('click', () => setLibraryOpen(true));
+  closeLibraryBtn?.addEventListener('click', () => setLibraryOpen(false));
+  libraryBackdrop?.addEventListener('click', () => setLibraryOpen(false));
+
+  libraryTabButtons.forEach(button => {
+    button.addEventListener('click', () => setLibraryTab(button.dataset.libraryTab));
+  });
+
+  washerVariantButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setWasherVariantFromLibrary(button.dataset.washerVariant);
+    });
+  });
+
+  materialPresetButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      applyMaterialPreset(
+        button.dataset.materialScope,
+        button.dataset.materialPreset,
+        true
+      );
+    });
+  });
+
   renderer.domElement.addEventListener('pointerdown', handleEditablePick);
   window.addEventListener('keydown', event => {
     if ((event.key === 'Delete' || event.key === 'Backspace') && selectedEditable) {
@@ -573,6 +666,9 @@ function stylePhotorealMaterial(material, mesh) {
 function applyPhotorealStyle(root) {
   const styled = new Set();
 
+  materialTargets.floor.clear();
+  materialTargets.roomDoor.clear();
+
   root.traverse(obj => {
     if (!obj.isMesh) return;
 
@@ -581,6 +677,15 @@ function applyPhotorealStyle(root) {
 
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     mats.filter(Boolean).forEach(mat => {
+      const materialName = (mat.name || '').toLowerCase();
+
+      if (materialName === '000__wood__matte') {
+        registerMaterialTarget('floor', mat);
+      }
+      if (materialName.includes('木纹1')) {
+        registerMaterialTarget('roomDoor', mat);
+      }
+
       if (!styled.has(mat.uuid)) {
         stylePhotorealMaterial(mat, obj);
         styled.add(mat.uuid);
@@ -589,6 +694,160 @@ function applyPhotorealStyle(root) {
       }
     });
   });
+
+  applySavedMaterialSelections();
+}
+
+function setLibraryOpen(open) {
+  componentLibraryEl?.classList.toggle('hidden', !open);
+  libraryBackdrop?.classList.toggle('hidden', !open);
+  if (open) syncLibraryUI();
+}
+
+function setLibraryTab(tab) {
+  libraryTabButtons.forEach(button => {
+    button.classList.toggle('active', button.dataset.libraryTab === tab);
+  });
+  librarySections.forEach(section => {
+    section.classList.toggle('hidden', section.dataset.librarySection !== tab);
+  });
+}
+
+function syncLibraryUI() {
+  const washer = getCurrentWasher();
+  const savedWasher = readSavedWasherState();
+  const variant = washer?.userData?.variant || savedWasher?.variant || 'black';
+
+  washerVariantButtons.forEach(button => {
+    button.classList.toggle('selected', button.dataset.washerVariant === variant);
+  });
+
+  const materialState = readMaterialState();
+  materialPresetButtons.forEach(button => {
+    const scope = button.dataset.materialScope;
+    const preset = button.dataset.materialPreset;
+    button.classList.toggle('selected', materialState[scope] === preset);
+  });
+}
+
+function readMaterialState() {
+  try {
+    const raw = localStorage.getItem(MATERIAL_STORAGE_KEY);
+    if (!raw) return { ...MATERIAL_DEFAULT_STATE };
+    const parsed = JSON.parse(raw) || {};
+    return {
+      floor: MATERIAL_PRESETS.floor[parsed.floor]
+        ? parsed.floor
+        : MATERIAL_DEFAULT_STATE.floor,
+      roomDoor: MATERIAL_PRESETS.roomDoor[parsed.roomDoor]
+        ? parsed.roomDoor
+        : MATERIAL_DEFAULT_STATE.roomDoor
+    };
+  } catch (error) {
+    console.warn('Unable to read material library state.', error);
+    return { ...MATERIAL_DEFAULT_STATE };
+  }
+}
+
+function writeMaterialState(state) {
+  try {
+    localStorage.setItem(MATERIAL_STORAGE_KEY, JSON.stringify(state));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist material library state.', error);
+    return false;
+  }
+}
+
+function registerMaterialTarget(scope, material) {
+  if (!materialTargets[scope] || !material) return;
+
+  if (material.userData.libraryOriginalMap === undefined) {
+    material.userData.libraryOriginalMap = material.map || null;
+  }
+  materialTargets[scope].add(material);
+}
+
+function applyMaterialPreset(scope, presetId, save = true) {
+  const preset = MATERIAL_PRESETS[scope]?.[presetId];
+  if (!preset) return false;
+
+  materialTargets[scope]?.forEach(material => {
+    const originalMap = material.userData.libraryOriginalMap || null;
+    material.color?.setHex(preset.color);
+    material.roughness = preset.roughness;
+    material.metalness = 0;
+    material.map = preset.useTexture ? originalMap : null;
+    material.needsUpdate = true;
+  });
+
+  if (save) {
+    const state = readMaterialState();
+    state[scope] = presetId;
+    writeMaterialState(state);
+  }
+
+  syncLibraryUI();
+
+  const scopeLabel = scope === 'floor' ? '木地板' : '房間門片';
+  setStatus(scopeLabel + '已切換：' + preset.label + ' · 已自動記憶');
+  return true;
+}
+
+function applySavedMaterialSelections() {
+  const state = readMaterialState();
+  applyMaterialPreset('floor', state.floor, false);
+  applyMaterialPreset('roomDoor', state.roomDoor, false);
+}
+
+function applyWasherVariant(washer, variantId, save = true) {
+  if (!washer) return false;
+
+  const variant = WASHER_VARIANTS[variantId] || WASHER_VARIANTS.black;
+  const mats = washer._variantMaterials;
+  if (!mats) return false;
+
+  mats.body.color.setHex(variant.body);
+  mats.fascia.color.setHex(variant.fascia);
+  mats.control.color.setHex(variant.control);
+  mats.darkDetail.color.setHex(variant.darkDetail);
+  mats.trim.color.setHex(variant.trim);
+
+  Object.values(mats).forEach(material => {
+    material.needsUpdate = true;
+  });
+
+  washer.userData.variant = WASHER_VARIANTS[variantId] ? variantId : 'black';
+
+  if (save) saveWasherState(washer);
+  syncLibraryUI();
+  return true;
+}
+
+function setWasherVariantFromLibrary(variantId) {
+  let washer = getCurrentWasher();
+
+  if (!washer) {
+    const saved = readSavedWasherState();
+    washer = createPanasonicWasher();
+
+    if (saved) {
+      applyWasherState(washer, { ...saved, exists: true, variant: variantId });
+    } else {
+      placeWasherAtBalcony(washer);
+    }
+
+    editableRoot.add(washer);
+  }
+
+  applyWasherVariant(washer, variantId, true);
+  selectEditable(washer);
+
+  setStatus(
+    'Panasonic NA-V170RPH · ' +
+    WASHER_VARIANTS[variantId].label +
+    ' · 已套用並記憶'
+  );
 }
 
 function normalizeRadians(angle) {
@@ -654,7 +913,10 @@ function readSavedWasherState() {
       z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : WASHER_DEFAULT_STATE.z,
       rotationY: Number.isFinite(Number(parsed.rotationY))
         ? Number(parsed.rotationY)
-        : WASHER_DEFAULT_STATE.rotationY
+        : WASHER_DEFAULT_STATE.rotationY,
+      variant: WASHER_VARIANTS[parsed.variant]
+        ? parsed.variant
+        : WASHER_DEFAULT_STATE.variant
     };
   } catch (error) {
     console.warn('Unable to read saved washer state.', error);
@@ -669,7 +931,8 @@ function writeWasherState(state) {
       x: Number(state.x),
       y: 0,
       z: Number(state.z),
-      rotationY: Number(state.rotationY)
+      rotationY: Number(state.rotationY),
+      variant: WASHER_VARIANTS[state.variant] ? state.variant : 'black'
     }));
     return true;
   } catch (error) {
@@ -686,7 +949,8 @@ function saveWasherState(washer) {
     x: washer.position.x,
     y: 0,
     z: washer.position.z,
-    rotationY: washer.rotation.y
+    rotationY: washer.rotation.y,
+    variant: washer.userData.variant || 'black'
   });
 
   if (saved) {
@@ -715,6 +979,7 @@ function applyWasherState(washer, state) {
   washer.rotation.set(0, next.rotationY, 0);
   washer.userData.floorY = 0;
   washer.userData.hasSavedPlacement = Boolean(state);
+  applyWasherVariant(washer, next.variant || 'black', false);
 }
 
 function restoreOrCreateWasher() {
@@ -756,10 +1021,20 @@ function createPanasonicWasher() {
     clearcoat: 0.22,
     clearcoatRoughness: 0.38
   });
-  const panelMat = new THREE.MeshStandardMaterial({
-    color: 0x0d0f10,
+  const fasciaMat = new THREE.MeshStandardMaterial({
+    color: 0x131516,
+    metalness: 0.18,
+    roughness: 0.36
+  });
+  const controlMat = new THREE.MeshStandardMaterial({
+    color: 0x0b0d0e,
     metalness: 0.22,
     roughness: 0.30
+  });
+  const darkDetailMat = new THREE.MeshStandardMaterial({
+    color: 0x111314,
+    metalness: 0.18,
+    roughness: 0.34
   });
   const trimMat = new THREE.MeshStandardMaterial({
     color: 0x555b60,
@@ -788,7 +1063,7 @@ function createPanasonicWasher() {
   // Slightly recessed front fascia.
   const fascia = new THREE.Mesh(
     new THREE.BoxGeometry(width * 0.94, height * 0.90, 0.018),
-    panelMat
+    fasciaMat
   );
   fascia.position.set(0, height * 0.50, depth / 2 + 0.010);
   fascia.castShadow = true;
@@ -798,7 +1073,7 @@ function createPanasonicWasher() {
   // Touch-control band.
   const controlBand = new THREE.Mesh(
     new THREE.BoxGeometry(width * 0.88, 0.125, 0.024),
-    panelMat
+    controlMat
   );
   controlBand.position.set(0, height * 0.885, depth / 2 + 0.022);
   group.add(controlBand);
@@ -829,7 +1104,7 @@ function createPanasonicWasher() {
 
   const doorInset = new THREE.Mesh(
     new THREE.CylinderGeometry(0.196, 0.196, 0.036, 64),
-    panelMat
+    darkDetailMat
   );
   doorInset.rotation.x = Math.PI / 2;
   doorInset.position.set(0, height * 0.47, depth / 2 + 0.043);
@@ -847,7 +1122,7 @@ function createPanasonicWasher() {
   // Bottom plinth / feet.
   const plinth = new THREE.Mesh(
     new THREE.BoxGeometry(width * 0.92, 0.055, depth * 0.86),
-    panelMat
+    darkDetailMat
   );
   plinth.position.set(0, 0.028, -0.015);
   plinth.castShadow = true;
@@ -862,6 +1137,18 @@ function createPanasonicWasher() {
   pickProxy.position.y = height / 2;
   pickProxy.userData.pickProxy = true;
   group.add(pickProxy);
+
+  group._variantMaterials = {
+    body: bodyMat,
+    fascia: fasciaMat,
+    control: controlMat,
+    darkDetail: darkDetailMat,
+    trim: trimMat
+  };
+  group.userData.componentId = 'panasonic-na-v170rph';
+  group.userData.variant = 'black';
+
+  applyWasherVariant(group, 'black', false);
 
   return group;
 }
@@ -907,7 +1194,7 @@ function selectEditable(object) {
     transformControls.attach(object);
     setEditableMode(editableMode);
     objectToolbar?.classList.remove('hidden');
-    setStatus('已選取 Panasonic NA-V170RPH-K · 旋轉會自動吸附 0° / 90° / 180° / 270°');
+    setStatus((object.userData.label || '元件') + ' · 可移動 / 旋轉磁吸 / 刪除');
   } else {
     transformControls.detach();
     objectToolbar?.classList.add('hidden');
@@ -1401,6 +1688,9 @@ function updatePresentationGround(box) {
 }
 
 function clearModel() {
+  materialTargets.floor.clear();
+  materialTargets.roomDoor.clear();
+
   if (transformControls) transformControls.detach();
   selectedEditable = null;
   if (objectToolbar) objectToolbar.classList.add('hidden');
@@ -1505,7 +1795,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-room-angle-magnet-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-component-material-library-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1553,6 +1843,7 @@ async function tryAutoLoadRepoModel() {
     modelRoot.add(correctedW3);
 
     const washer = restoreOrCreateWasher();
+    syncLibraryUI();
 
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
