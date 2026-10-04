@@ -33,12 +33,12 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: viewer
       - name: Browser smoke
-        run: npm run smoke -- --no-build
+        run: node scripts/stable-smoke.mjs
         working-directory: viewer
       - name: Upload smoke screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stable-shell-${{ github.sha }}
-          path: viewer/output/smoke/
+          path: viewer/output/stable-smoke/
           if-no-files-found: warn
