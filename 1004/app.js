@@ -280,7 +280,7 @@ const materialTargets = {
 };
 
 const WALL_COLLISION_CLEARANCE = 0.012; // 12 mm furniture-to-wall safety gap
-const WALL_SWEEP_STEP = 0.02;           // 20 mm swept-movement sampling
+const WALL_SWEEP_STEP = 0.01;           // 10 mm swept-movement sampling
 let wallColliders = [];
 const collisionBoxA = new THREE.Box3();
 const collisionBoxB = new THREE.Box3();
@@ -1514,42 +1514,95 @@ function rebuildWallColliders() {
 
   modelRoot.updateWorldMatrix(true, true);
 
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+
+  const structuralMaterial = name => {
+    const value = String(name || '').toLowerCase().trim();
+
+    // These are the actual structural wall finishes in the converted 1004 GLB.
+    // Important: several walls live inside large merged ROOT meshes, so mesh
+    // bounding boxes cannot be used to identify them reliably.
+    return (
+      value === 'default face' ||
+      value === '09 - default' ||
+      value.startsWith('瓷砖')
+    );
+  };
+
   modelRoot.traverse(object => {
     if (!object.isMesh || !object.visible || !object.geometry) return;
-
-    // Generated architectural corrections can stay collidable, but anything
-    // explicitly marked non-collidable is ignored.
     if (object.userData?.ignoreWallCollision) return;
 
-    collisionBoxA.setFromObject(object);
-    if (collisionBoxA.isEmpty()) return;
+    const material = Array.isArray(object.material)
+      ? object.material[0]
+      : object.material;
 
-    collisionBoxA.getSize(collisionSize);
+    if (!structuralMaterial(material?.name)) return;
 
-    const height = collisionSize.y;
-    const width = collisionSize.x;
-    const depth = collisionSize.z;
+    const geometry = object.geometry;
+    const position = geometry.attributes?.position;
+    if (!position) return;
 
-    // Wall heuristic:
-    // - residential full-height element
-    // - thin in X or Z
-    // - meaningful run length in the other horizontal axis
-    //
-    // This excludes flooring, countertops, sanitary fixtures, etc., while
-    // keeping the apartment partitions / exterior wall planes.
-    const tallEnough = height >= 1.35;
-    const xWall = width <= 0.42 && depth >= 0.38;
-    const zWall = depth <= 0.42 && width >= 0.38;
+    const index = geometry.index;
+    const triangleCount = index
+      ? Math.floor(index.count / 3)
+      : Math.floor(position.count / 3);
 
-    if (!tallEnough || !(xWall || zWall)) return;
+    for (let triIndex = 0; triIndex < triangleCount; triIndex++) {
+      const ia = index ? index.getX(triIndex * 3) : triIndex * 3;
+      const ib = index ? index.getX(triIndex * 3 + 1) : triIndex * 3 + 1;
+      const ic = index ? index.getX(triIndex * 3 + 2) : triIndex * 3 + 2;
 
-    wallColliders.push({
-      box: collisionBoxA.clone(),
-      name: object.name || 'wall'
-    });
+      a.fromBufferAttribute(position, ia).applyMatrix4(object.matrixWorld);
+      b.fromBufferAttribute(position, ib).applyMatrix4(object.matrixWorld);
+      c.fromBufferAttribute(position, ic).applyMatrix4(object.matrixWorld);
+
+      THREE.Triangle.getNormal(a, b, c, normal);
+
+      // Wall surfaces are near-vertical: their normal points horizontally.
+      if (Math.abs(normal.y) > 0.28) continue;
+
+      const minY = Math.min(a.y, b.y, c.y);
+      const maxY = Math.max(a.y, b.y, c.y);
+      const heightSpan = maxY - minY;
+
+      const minX = Math.min(a.x, b.x, c.x);
+      const maxX = Math.max(a.x, b.x, c.x);
+      const minZ = Math.min(a.z, b.z, c.z);
+      const maxZ = Math.max(a.z, b.z, c.z);
+      const horizontalSpan = Math.max(maxX - minX, maxZ - minZ);
+
+      // Reject floor edges, tiny trim pieces, etc.
+      if (heightSpan < 0.38 || horizontalSpan < 0.10) continue;
+
+      const triangle = new THREE.Triangle(
+        a.clone(),
+        b.clone(),
+        c.clone()
+      );
+
+      const box = new THREE.Box3().setFromPoints([
+        triangle.a,
+        triangle.b,
+        triangle.c
+      ]);
+
+      wallColliders.push({
+        triangle,
+        box,
+        name: object.name || 'wall',
+        material: material?.name || ''
+      });
+    }
   });
 
-  console.info('[collision] wall colliders:', wallColliders.length);
+  console.info(
+    '[collision] structural wall triangles:',
+    wallColliders.length
+  );
 }
 
 function getEditableCollisionBox(object, target = new THREE.Box3()) {
@@ -1588,27 +1641,24 @@ function editableIntersectsWall(object) {
   const objectBox = getEditableCollisionBox(object, collisionBoxA);
   if (objectBox.isEmpty()) return false;
 
+  // Clearance is horizontal only. Keeping Y exact prevents an object from
+  // colliding with unrelated wall geometry above/below it.
+  const collisionTestBox = objectBox.clone();
+  collisionTestBox.min.x -= WALL_COLLISION_CLEARANCE;
+  collisionTestBox.max.x += WALL_COLLISION_CLEARANCE;
+  collisionTestBox.min.z -= WALL_COLLISION_CLEARANCE;
+  collisionTestBox.max.z += WALL_COLLISION_CLEARANCE;
+
   for (const collider of wallColliders) {
-    const wall = collider.box;
+    // Cheap broad-phase first.
+    if (!collisionTestBox.intersectsBox(collider.box)) continue;
 
-    // Vertical overlap is required so furniture on one floor cannot collide
-    // with unrelated geometry above/below.
-    const overlapsY =
-      objectBox.max.y > wall.min.y + 0.02 &&
-      objectBox.min.y < wall.max.y - 0.02;
-
-    if (!overlapsY) continue;
-
-    // Inflate only the wall footprint by a small real-world clearance.
-    const overlapsX =
-      objectBox.max.x > wall.min.x - WALL_COLLISION_CLEARANCE &&
-      objectBox.min.x < wall.max.x + WALL_COLLISION_CLEARANCE;
-
-    const overlapsZ =
-      objectBox.max.z > wall.min.z - WALL_COLLISION_CLEARANCE &&
-      objectBox.min.z < wall.max.z + WALL_COLLISION_CLEARANCE;
-
-    if (overlapsX && overlapsZ) return true;
+    // Exact narrow-phase against the actual wall triangle.
+    // This preserves genuine door/window openings instead of treating the
+    // entire merged wall mesh as one solid rectangular obstacle.
+    if (collisionTestBox.intersectsTriangle(collider.triangle)) {
+      return true;
+    }
   }
 
   return false;
@@ -3353,7 +3403,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-wall-collision-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-wall-triangle-collision-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
