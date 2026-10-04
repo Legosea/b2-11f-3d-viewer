@@ -2076,7 +2076,53 @@ function createCentroKitchen() {
   }
 
   // Base cabinet and toe kick.
-  addBox(width, baseHeight, depth, width/2, baseHeight/2, depth/2, cabinetMat, 'CENTRO_base');
+  // Keep the internal carcass lower than the sink bottom so the sink is a real
+  // visible recess. Drawer fronts / appliances still extend to normal height.
+  const carcassHeight = 0.635;
+  addBox(
+    width,
+    carcassHeight,
+    depth,
+    width/2,
+    carcassHeight/2,
+    depth/2,
+    cabinetMat,
+    'CENTRO_base'
+  );
+
+  // Side/rear structural rails preserve cabinet mass without closing the
+  // sink cavity at countertop height.
+  addBox(
+    width,
+    0.055,
+    0.045,
+    width/2,
+    baseHeight - 0.055/2,
+    0.030,
+    cabinetMat,
+    'CENTRO_rear_top_rail'
+  );
+  addBox(
+    0.030,
+    baseHeight - carcassHeight,
+    depth,
+    0.015,
+    carcassHeight + (baseHeight-carcassHeight)/2,
+    depth/2,
+    cabinetMat,
+    'CENTRO_left_upper_side'
+  );
+  addBox(
+    0.030,
+    baseHeight - carcassHeight,
+    depth,
+    width - 0.015,
+    carcassHeight + (baseHeight-carcassHeight)/2,
+    depth/2,
+    cabinetMat,
+    'CENTRO_right_upper_side'
+  );
+
   addBox(width - 0.04, 0.08, 0.05, width/2, 0.04, depth + 0.005, darkMat, 'CENTRO_toekick');
 
   const moduleW = width / 3;
@@ -2314,17 +2360,25 @@ function createCentroKitchen() {
   // Cleanup-style photoreal stainless Naga-rail sink.
   // -----------------------------------------------------------------------
   const sinkSteel = new THREE.MeshPhysicalMaterial({
-    color: 0xbfc4c6,
-    metalness: 0.88,
-    roughness: 0.31,
-    clearcoat: 0.08,
-    clearcoatRoughness: 0.42
+    color: 0xb7bec0,
+    metalness: 0.86,
+    roughness: 0.32,
+    clearcoat: 0.06,
+    clearcoatRoughness: 0.44
+  });
+
+  const sinkInteriorSteel = new THREE.MeshPhysicalMaterial({
+    color: 0x8f989a,
+    metalness: 0.82,
+    roughness: 0.40,
+    clearcoat: 0.03,
+    clearcoatRoughness: 0.52
   });
 
   const sinkDarkSteel = new THREE.MeshStandardMaterial({
-    color: 0x747b7d,
-    metalness: 0.78,
-    roughness: 0.35
+    color: 0x5f6769,
+    metalness: 0.74,
+    roughness: 0.42
   });
 
   // Fine horizontal brushed-steel bump texture.
@@ -2362,7 +2416,9 @@ function createCentroKitchen() {
   );
   brushedTexture.needsUpdate = true;
   sinkSteel.bumpMap = brushedTexture;
-  sinkSteel.bumpScale = 0.0022;
+  sinkSteel.bumpScale = 0.0018;
+  sinkInteriorSteel.bumpMap = brushedTexture;
+  sinkInteriorSteel.bumpScale = 0.0026;
 
   function roundedRectPath(path, x, y, w, h, r) {
     const radius = Math.min(r, w / 2, h / 2);
@@ -2432,11 +2488,11 @@ function createCentroKitchen() {
       0.010,
       innerD - 0.032
     ),
-    sinkSteel
+    sinkInteriorSteel
   );
   basinBottom.position.set(
     sinkX,
-    baseHeight + counterThickness - sinkH + 0.012,
+    baseHeight + counterThickness - sinkH + 0.004,
     sinkZ
   );
   basinBottom.castShadow = true;
@@ -2452,7 +2508,7 @@ function createCentroKitchen() {
 
   const backWall = new THREE.Mesh(
     new THREE.BoxGeometry(innerW - 0.020, basinWallH, wallT),
-    sinkSteel
+    sinkInteriorSteel
   );
   backWall.position.set(
     sinkX,
@@ -2469,7 +2525,7 @@ function createCentroKitchen() {
 
   const leftWall = new THREE.Mesh(
     new THREE.BoxGeometry(wallT, basinWallH, innerD - 0.020),
-    sinkSteel
+    sinkInteriorSteel
   );
   leftWall.position.set(
     sinkX - innerW / 2 + wallT / 2,
@@ -2525,9 +2581,9 @@ function createCentroKitchen() {
   const drainInner = new THREE.Mesh(
     new THREE.CylinderGeometry(0.038, 0.038, 0.012, 48),
     new THREE.MeshStandardMaterial({
-      color: 0x4d5456,
-      metalness: 0.72,
-      roughness: 0.42
+      color: 0x41484a,
+      metalness: 0.68,
+      roughness: 0.46
     })
   );
   drainInner.position.set(
@@ -2537,21 +2593,23 @@ function createCentroKitchen() {
   );
   assembly.add(drainInner);
 
-  // Modern pull-out gooseneck faucet on the rear-right deck.
+  // Modern high-arc pull-out faucet on the rear deck.
+  // Built as a true 3D curve instead of a rotated Torus, so the spout arcs
+  // naturally from the rear deck forward over the bowl.
   const faucetMat = new THREE.MeshPhysicalMaterial({
-    color: 0xb5bbbd,
+    color: 0xaeb6b8,
     metalness: 0.90,
-    roughness: 0.24,
-    clearcoat: 0.08,
-    clearcoatRoughness: 0.28
+    roughness: 0.25,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.30
   });
 
-  const faucetX = sinkX + sinkW * 0.29;
-  const faucetZ = sinkBack + 0.010;
+  const faucetX = sinkX + sinkW * 0.28;
+  const faucetZ = Math.max(0.030, sinkBack * 0.48);
   const faucetBaseY = baseHeight + counterThickness;
 
   const faucetBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.030, 0.034, 0.070, 28),
+    new THREE.CylinderGeometry(0.029, 0.034, 0.070, 32),
     faucetMat
   );
   faucetBase.position.set(
@@ -2559,69 +2617,93 @@ function createCentroKitchen() {
     faucetBaseY + 0.035,
     faucetZ
   );
+  faucetBase.castShadow = true;
+  faucetBase.receiveShadow = true;
   assembly.add(faucetBase);
 
-  const faucetStem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.018, 0.020, 0.245, 28),
+  // Slightly thicker lower stem.
+  const lowerStem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0175, 0.0205, 0.145, 32),
     faucetMat
   );
-  faucetStem.position.set(
+  lowerStem.position.set(
     faucetX,
-    faucetBaseY + 0.175,
+    faucetBaseY + 0.132,
     faucetZ
   );
-  assembly.add(faucetStem);
+  lowerStem.castShadow = true;
+  assembly.add(lowerStem);
 
-  const faucetArch = new THREE.Mesh(
-    new THREE.TorusGeometry(0.105, 0.017, 16, 48, Math.PI),
+  const spoutCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(faucetX, faucetBaseY + 0.195, faucetZ),
+    new THREE.Vector3(faucetX, faucetBaseY + 0.300, faucetZ + 0.002),
+    new THREE.Vector3(faucetX, faucetBaseY + 0.380, faucetZ + 0.045),
+    new THREE.Vector3(faucetX, faucetBaseY + 0.405, faucetZ + 0.125),
+    new THREE.Vector3(faucetX, faucetBaseY + 0.378, faucetZ + 0.205),
+    new THREE.Vector3(faucetX, faucetBaseY + 0.330, faucetZ + 0.245)
+  ]);
+
+  const spout = new THREE.Mesh(
+    new THREE.TubeGeometry(
+      spoutCurve,
+      48,
+      0.0155,
+      14,
+      false
+    ),
     faucetMat
   );
-  faucetArch.rotation.set(
-    Math.PI / 2,
-    0,
-    Math.PI / 2
-  );
-  faucetArch.position.set(
-    faucetX - 0.103,
-    faucetBaseY + 0.292,
-    faucetZ
-  );
-  assembly.add(faucetArch);
+  spout.castShadow = true;
+  spout.receiveShadow = true;
+  spout.name = 'CENTRO_faucet_high_arc';
+  assembly.add(spout);
 
-  const faucetNozzle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.017, 0.019, 0.105, 24),
+  // Pull-out spray head points downward at the end of the arc.
+  const sprayHead = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.021, 0.023, 0.090, 28),
     faucetMat
   );
-  faucetNozzle.rotation.z = Math.PI / 2;
-  faucetNozzle.position.set(
-    faucetX - 0.207,
-    faucetBaseY + 0.292,
-    faucetZ
+  sprayHead.position.set(
+    faucetX,
+    faucetBaseY + 0.288,
+    faucetZ + 0.245
   );
-  assembly.add(faucetNozzle);
+  sprayHead.castShadow = true;
+  assembly.add(sprayHead);
 
-  const faucetHead = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.024, 0.024, 0.065, 24),
-    faucetMat
+  // Dark nozzle face underneath.
+  const nozzleFace = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.017, 0.017, 0.006, 28),
+    new THREE.MeshStandardMaterial({
+      color: 0x555b5d,
+      metalness: 0.46,
+      roughness: 0.48
+    })
   );
-  faucetHead.position.set(
-    faucetX - 0.260,
-    faucetBaseY + 0.260,
+  nozzleFace.position.set(
+    faucetX,
+    faucetBaseY + 0.241,
+    faucetZ + 0.245
+  );
+  assembly.add(nozzleFace);
+
+  // Slim single-lever mixer on the side of the base.
+  const leverPivot = new THREE.Group();
+  leverPivot.position.set(
+    faucetX + 0.035,
+    faucetBaseY + 0.145,
     faucetZ
   );
-  assembly.add(faucetHead);
+  leverPivot.rotation.z = THREE.MathUtils.degToRad(-28);
 
   const faucetLever = new THREE.Mesh(
-    new THREE.BoxGeometry(0.012, 0.080, 0.012),
+    new THREE.BoxGeometry(0.011, 0.095, 0.014),
     faucetMat
   );
-  faucetLever.position.set(
-    faucetX + 0.038,
-    faucetBaseY + 0.155,
-    faucetZ
-  );
-  faucetLever.rotation.z = THREE.MathUtils.degToRad(-20);
-  assembly.add(faucetLever);
+  faucetLever.position.y = 0.040;
+  faucetLever.castShadow = true;
+  leverPivot.add(faucetLever);
+  assembly.add(leverPivot);
 
   // Upper cabinets and range hood.
   const upperY = 1.88;
@@ -3891,7 +3973,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-realistic-sink-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-sink-depth-faucet-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
