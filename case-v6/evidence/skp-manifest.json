@@ -8,16 +8,13 @@
     "faces": 92
   },
   "sourceBounds": {
-    "min": [
-      0,
-      -0.0226,
-      0
-    ],
-    "max": [
-      11.14478848,
-      2.6,
-      6.41820408
-    ]
+    "min": [0, -0.0226, 0],
+    "max": [11.14478848, 2.6, 6.41820408]
   },
-  "note": "Source axes are SketchUp X/Y ground plane and Z vertical; runtime converts to Three.js Y-up."
+  "note": "Source axes are SketchUp X/Y ground plane and Z vertical; runtime converts to Three.js Y-up.",
+  "presentationFilter": {
+    "excludedRootFaceIds": [2953],
+    "sourceElevationM": 2.6,
+    "reason": "SketchUp global top-cap face removed for the open-top dollhouse presentation. Wall/opening topology remains source-derived."
+  }
 }

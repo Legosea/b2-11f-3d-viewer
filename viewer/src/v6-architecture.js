@@ -49,7 +49,7 @@ export const V6_WINDOWS=[
 export function loadV6Architecture(scene){
   const root=new THREE.Group(); root.name='B2-11F-v6-SKP-calibrated'; scene.add(root);
   const mats={
-    shell:new THREE.MeshStandardMaterial({color:0xeee9df,roughness:0.92,side:THREE.DoubleSide}),
+    shell:new THREE.MeshStandardMaterial({color:0xeee9df,roughness:0.92,side:THREE.DoubleSide,flatShading:true}),
     frame:new THREE.MeshStandardMaterial({color:0x3d4143,roughness:0.48,metalness:0.35}),
     railing:new THREE.MeshStandardMaterial({color:0x555b5e,roughness:0.42,metalness:0.45,side:THREE.DoubleSide}),
     fixture:new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.72})
