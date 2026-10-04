@@ -370,16 +370,81 @@ function setStatus(text) {
 }
 
 async function tryAutoLoadRepoModel() {
-  // 若之後把 1004.skp 放進同一個 GitHub 目錄，頁面會自動抓取並載入。
+  showLoading(true, '載入 1004 模型…', '正在從 GitHub Pages 讀取已轉換的 Three.js 模型。');
+
   try {
-    const head = await fetch('./1004.skp', { method: 'HEAD', cache: 'no-store' });
-    if (!head.ok) return;
-    const response = await fetch('./1004.skp', { cache: 'no-store' });
-    if (!response.ok) return;
-    const buffer = await response.arrayBuffer();
+    clearModel();
+
+    const partCount = 15;
+    const partUrls = Array.from({ length: partCount }, (_, i) =>
+      './model/part-' + String(i).padStart(2, '0') + '.txt'
+    );
+
+    const parts = await Promise.all(partUrls.map(async (url, i) => {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('模型分段 ' + i + ' 載入失敗：HTTP ' + response.status);
+      }
+      return (await response.text()).trim();
+    }));
+
+    const base64 = parts.join('');
+    const gzipBytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+
+    let glbBuffer;
+    if ('DecompressionStream' in window) {
+      const stream = new Blob([gzipBytes])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
+      glbBuffer = await new Response(stream).arrayBuffer();
+    } else {
+      const { gunzipSync } = await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
+      const unzipped = gunzipSync(gzipBytes);
+      glbBuffer = unzipped.buffer.slice(
+        unzipped.byteOffset,
+        unzipped.byteOffset + unzipped.byteLength
+      );
+    }
+
+    currentGlbBytes = new Uint8Array(glbBuffer);
+    currentSceneData = null;
     currentFilename = '1004.skp';
-    await loadBuffer(buffer, currentFilename, buffer.byteLength >= LARGE_FILE_BYTES);
-  } catch {
-    // 目前 repository 沒有模型檔時保持手動選檔介面。
+
+    const gltf = await new Promise((resolve, reject) => {
+      new GLTFLoader().parse(glbBuffer, './', resolve, reject);
+    });
+
+    let meshCount = 0;
+    gltf.scene.traverse(obj => {
+      if (!obj.isMesh) return;
+      meshCount += 1;
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.filter(Boolean).forEach(mat => {
+        if ('side' in mat) mat.side = THREE.DoubleSide;
+      });
+    });
+
+    modelRoot.add(gltf.scene);
+    welcome.classList.add('hidden');
+    fitBtn.disabled = false;
+    exportBtn.disabled = false;
+
+    modeBadge.textContent = '線上 GLB';
+    modelInfo.textContent =
+      meshCount + ' meshes · ' +
+      (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
+    setStatus('1004 模型載入完成');
+    fitCamera();
+  } catch (error) {
+    console.error(error);
+    welcome.classList.remove('hidden');
+    modeBadge.textContent = '載入失敗';
+    modelInfo.textContent = '';
+    setStatus('模型自動載入失敗：' + (error?.message || error));
+  } finally {
+    showLoading(false);
   }
 }
