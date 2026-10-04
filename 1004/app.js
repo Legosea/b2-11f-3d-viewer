@@ -64,16 +64,37 @@ const WASHER_VARIANTS = Object.freeze({
 
 const MATERIAL_PRESETS = Object.freeze({
   floor: {
-    'light-oak': { label: '淺橡木', color: 0xf0d8ad, roughness: 0.80, useTexture: true },
-    'natural-oak': { label: '自然橡木', color: 0xd1ae7b, roughness: 0.78, useTexture: true },
-    'warm-oak': { label: '暖橡木', color: 0xb98554, roughness: 0.78, useTexture: true },
-    'walnut': { label: '胡桃木', color: 0x76513a, roughness: 0.76, useTexture: true }
+    'light-oak': {
+      label: '淺橡木', color: 0xf5e3c3, roughness: 0.80, useTexture: true,
+      wood: ['#efd9b3','#e5c897','#c9a56f','#a77e4d']
+    },
+    'natural-oak': {
+      label: '自然橡木', color: 0xe2c28e, roughness: 0.78, useTexture: true,
+      wood: ['#d8b77f','#cda66e','#ae8150','#825b36']
+    },
+    'warm-oak': {
+      label: '暖橡木', color: 0xc8945e, roughness: 0.78, useTexture: true,
+      wood: ['#bd8550','#a96d3d','#8a542f','#673a22']
+    },
+    'walnut': {
+      label: '胡桃木', color: 0x77533d, roughness: 0.76, useTexture: true,
+      wood: ['#79533d','#65422f','#4c3023','#2f1d17']
+    }
   },
   roomDoor: {
     'matte-white': { label: '霧白', color: 0xe8e3db, roughness: 0.82, useTexture: false },
-    'light-oak': { label: '淺橡木', color: 0xd5b17d, roughness: 0.78, useTexture: true },
-    'natural-wood': { label: '自然木', color: 0xb78353, roughness: 0.78, useTexture: true },
-    'walnut': { label: '胡桃木', color: 0x6d4937, roughness: 0.76, useTexture: true },
+    'light-oak': {
+      label: '淺橡木', color: 0xe0c393, roughness: 0.78, useTexture: true,
+      wood: ['#ddbf8e','#cfaa72','#b78954','#8d633b']
+    },
+    'natural-wood': {
+      label: '自然木', color: 0xb78353, roughness: 0.78, useTexture: true,
+      wood: ['#bf8b57','#a96f41','#88502e','#60351f']
+    },
+    'walnut': {
+      label: '胡桃木', color: 0x6d4937, roughness: 0.76, useTexture: true,
+      wood: ['#78513a','#603e2d','#452b20','#2d1a15']
+    },
     'warm-gray': { label: '暖灰', color: 0x91897f, roughness: 0.84, useTexture: false }
   }
 });
@@ -102,6 +123,9 @@ const moveObjectBtn = document.getElementById('moveObjectBtn');
 const rotateObjectBtn = document.getElementById('rotateObjectBtn');
 const deleteObjectBtn = document.getElementById('deleteObjectBtn');
 const libraryBtn = document.getElementById('libraryBtn');
+const topViewBtn = document.getElementById('topViewBtn');
+const frontViewBtn = document.getElementById('frontViewBtn');
+const sideViewBtn = document.getElementById('sideViewBtn');
 const componentLibraryEl = document.getElementById('componentLibrary');
 const libraryBackdrop = document.getElementById('libraryBackdrop');
 const closeLibraryBtn = document.getElementById('closeLibraryBtn');
@@ -112,6 +136,7 @@ const materialPresetButtons = [...document.querySelectorAll('[data-material-scop
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
+const woodTextureCache = new Map();
 let currentSceneData = null;
 let currentGlbBytes = null;
 let currentFilename = '1004.skp';
@@ -240,7 +265,7 @@ function initThree() {
   interiorLightRoot.name = 'Interior_Lighting';
   scene.add(interiorLightRoot);
 
-  nordicWoodTexture = createWoodTexture();
+  nordicWoodTexture = getWoodTexture('natural-oak', 'floor');
 
   window.addEventListener('resize', resize);
   resize();
@@ -261,10 +286,13 @@ function resize() {
 }
 
 function bindUI() {
-  fileInput.addEventListener('change', e => pickFile(e.target.files?.[0]));
-  welcomeFileInput.addEventListener('change', e => pickFile(e.target.files?.[0]));
+  fileInput?.addEventListener('change', e => pickFile(e.target.files?.[0]));
+  welcomeFileInput?.addEventListener('change', e => pickFile(e.target.files?.[0]));
   fitBtn.addEventListener('click', fitCamera);
-  exportBtn.addEventListener('click', downloadGlb);
+  exportBtn?.addEventListener('click', downloadGlb);
+  topViewBtn?.addEventListener('click', () => setStandardView('top'));
+  frontViewBtn?.addEventListener('click', () => setStandardView('front'));
+  sideViewBtn?.addEventListener('click', () => setStandardView('side'));
   addWasherBtn?.addEventListener('click', () => {
     const existing = getCurrentWasher();
     if (existing) {
@@ -391,7 +419,7 @@ async function loadBuffer(buffer, filename, preferWasm) {
 
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
-    exportBtn.disabled = !currentGlbBytes && !currentSceneData;
+    if (exportBtn) exportBtn.disabled = !currentGlbBytes && !currentSceneData;
     fitCamera();
   } catch (error) {
     console.error(error);
@@ -529,51 +557,153 @@ async function loadViaWasm(buffer, filename) {
   setStatus('完成 · ' + filename + ' · WASM ' + elapsed + ' ms');
 }
 
-function createWoodTexture() {
+function seededRandom(seed) {
+  let value = seed >>> 0;
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+}
+
+function hashString(text) {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createWoodTexture(presetId = 'natural-oak', scope = 'floor') {
+  const preset =
+    MATERIAL_PRESETS[scope]?.[presetId] ||
+    MATERIAL_PRESETS.floor['natural-oak'];
+
+  const palette = preset.wood || ['#d8b77f','#cda66e','#ae8150','#825b36'];
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
+  const random = seededRandom(hashString(scope + ':' + presetId));
 
-  ctx.fillStyle = '#caa876';
+  ctx.fillStyle = palette[0];
   ctx.fillRect(0, 0, 512, 512);
 
-  const plankH = 64;
-  for (let y = 0; y < 512; y += plankH) {
-    ctx.fillStyle = y % (plankH * 2) === 0 ? '#d2b181' : '#c7a373';
-    ctx.fillRect(0, y, 512, plankH);
+  if (scope === 'floor') {
+    const plankH = 64;
 
-    ctx.strokeStyle = 'rgba(118, 91, 58, 0.18)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, y + 1);
-    ctx.lineTo(512, y + 1);
-    ctx.stroke();
+    for (let y = 0; y < 512; y += plankH) {
+      const plankIndex = Math.floor(y / plankH);
+      const baseIndex = plankIndex % 2;
+      ctx.fillStyle = baseIndex ? palette[1] : palette[0];
+      ctx.fillRect(0, y, 512, plankH);
 
-    const offset = (y / plankH) % 2 === 0 ? 140 : 390;
-    ctx.strokeStyle = 'rgba(130, 102, 68, 0.12)';
-    ctx.beginPath();
-    ctx.moveTo(offset, y);
-    ctx.lineTo(offset, y + plankH);
-    ctx.stroke();
-
-    for (let i = 0; i < 7; i++) {
-      const yy = y + 8 + i * 7;
-      ctx.strokeStyle = 'rgba(132, 101, 63, 0.035)';
+      // Board joints: staggered like real engineered wood flooring.
+      const jointOffset = plankIndex % 2 === 0 ? 152 : 374;
+      ctx.strokeStyle = 'rgba(48,31,18,.22)';
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.moveTo(0, yy);
-      ctx.bezierCurveTo(140, yy - 4, 330, yy + 5, 512, yy - 2);
+      ctx.moveTo(jointOffset, y);
+      ctx.lineTo(jointOffset, y + plankH);
+      ctx.stroke();
+
+      // Plank seam.
+      ctx.strokeStyle = 'rgba(54,36,20,.28)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.7);
+      ctx.lineTo(512, y + 0.7);
+      ctx.stroke();
+
+      // Long, irregular timber grain.
+      for (let g = 0; g < 14; g++) {
+        const yy = y + 5 + random() * (plankH - 10);
+        const amp = 2 + random() * 5;
+        const phase = random() * Math.PI * 2;
+        ctx.strokeStyle = g % 4 === 0
+          ? 'rgba(70,43,23,.15)'
+          : 'rgba(86,55,29,.075)';
+        ctx.lineWidth = g % 5 === 0 ? 1.3 : 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, yy);
+        for (let x = 0; x <= 512; x += 32) {
+          const gy = yy +
+            Math.sin(x * 0.020 + phase) * amp +
+            Math.sin(x * 0.057 + phase * 0.7) * amp * 0.35;
+          ctx.lineTo(x, gy);
+        }
+        ctx.stroke();
+      }
+
+      // A few knots per board.
+      if (random() > 0.35) {
+        const knotX = 60 + random() * 390;
+        const knotY = y + 15 + random() * 34;
+        const knotR = 4 + random() * 6;
+
+        ctx.strokeStyle = 'rgba(67,39,21,.22)';
+        ctx.lineWidth = 1.2;
+        for (let ring = 1; ring <= 3; ring++) {
+          ctx.beginPath();
+          ctx.ellipse(
+            knotX,
+            knotY,
+            knotR * ring,
+            knotR * 0.45 * ring,
+            random() * 0.25,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        }
+      }
+    }
+  } else {
+    // Door veneer: long vertical grain, no flooring plank joints.
+    ctx.fillStyle = palette[0];
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let g = 0; g < 44; g++) {
+      const xx = 4 + random() * 504;
+      const amp = 1.5 + random() * 5;
+      const phase = random() * Math.PI * 2;
+      ctx.strokeStyle = g % 6 === 0
+        ? 'rgba(63,38,21,.18)'
+        : 'rgba(78,48,25,.075)';
+      ctx.lineWidth = g % 7 === 0 ? 1.4 : 0.8;
+      ctx.beginPath();
+      ctx.moveTo(xx, 0);
+      for (let y = 0; y <= 512; y += 28) {
+        ctx.lineTo(xx + Math.sin(y * 0.023 + phase) * amp, y);
+      }
       ctx.stroke();
     }
   }
+
+  // Gentle translucent glaze keeps the palette coherent.
+  const glaze = ctx.createLinearGradient(0, 0, 512, 512);
+  glaze.addColorStop(0, 'rgba(255,255,255,.10)');
+  glaze.addColorStop(0.55, 'rgba(255,255,255,0)');
+  glaze.addColorStop(1, 'rgba(55,30,15,.06)');
+  ctx.fillStyle = glaze;
+  ctx.fillRect(0, 0, 512, 512);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  texture.repeat.set(scope === 'floor' ? 1.15 : 1.0, scope === 'floor' ? 1.15 : 1.0);
   texture.needsUpdate = true;
   return texture;
+}
+
+function getWoodTexture(presetId, scope = 'floor') {
+  const key = scope + ':' + presetId;
+  if (!woodTextureCache.has(key)) {
+    woodTextureCache.set(key, createWoodTexture(presetId, scope));
+  }
+  return woodTextureCache.get(key);
 }
 
 function ensurePlanarUV(geometry, scale = 0.7) {
@@ -773,11 +903,17 @@ function applyMaterialPreset(scope, presetId, save = true) {
   if (!preset) return false;
 
   materialTargets[scope]?.forEach(material => {
-    const originalMap = material.userData.libraryOriginalMap || null;
-    material.color?.setHex(preset.color);
     material.roughness = preset.roughness;
     material.metalness = 0;
-    material.map = preset.useTexture ? originalMap : null;
+
+    if (preset.useTexture) {
+      material.map = getWoodTexture(presetId, scope);
+      material.color?.setHex(0xffffff);
+    } else {
+      material.map = null;
+      material.color?.setHex(preset.color);
+    }
+
     material.needsUpdate = true;
   });
 
@@ -1721,11 +1857,48 @@ function clearModel() {
   threeTextureCache.clear();
   currentSceneData = null;
   currentGlbBytes = null;
-  exportBtn.disabled = true;
+  if (exportBtn) exportBtn.disabled = true;
   fitBtn.disabled = true;
 }
 
+function setStandardView(view) {
+  const box = new THREE.Box3().setFromObject(modelRoot);
+  if (box.isEmpty()) return;
+
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const distance = Math.max(sphere.radius * 3.2, maxDim * 1.8);
+
+  camera.fov = 28;
+  camera.near = Math.max(0.02, distance / 2000);
+  camera.far = distance * 10;
+
+  if (view === 'top') {
+    camera.up.set(0, 0, -1);
+    camera.position.set(center.x, center.y + distance, center.z);
+    setStatus('三視圖 · 俯視');
+  } else if (view === 'front') {
+    camera.up.set(0, 1, 0);
+    camera.position.set(center.x, center.y + size.y * 0.10, center.z + distance);
+    setStatus('三視圖 · 正視');
+  } else {
+    camera.up.set(0, 1, 0);
+    camera.position.set(center.x + distance, center.y + size.y * 0.10, center.z);
+    setStatus('三視圖 · 側視');
+  }
+
+  camera.updateProjectionMatrix();
+  controls.target.copy(center);
+  controls.update();
+}
+
 function fitCamera() {
+  camera.fov = 40;
+  camera.up.set(0, 1, 0);
+  camera.updateProjectionMatrix();
+
   const box = new THREE.Box3().setFromObject(modelRoot);
   if (box.isEmpty()) return;
 
@@ -1795,7 +1968,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-component-material-library-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-woodgrain-threeviews-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1847,7 +2020,7 @@ async function tryAutoLoadRepoModel() {
 
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
-    exportBtn.disabled = false;
+    if (exportBtn) exportBtn.disabled = false;
 
     modeBadge.textContent = '空屋擬真 · 西北向';
     modelInfo.textContent =
