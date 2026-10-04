@@ -196,7 +196,8 @@ const DAYBED_DEFAULT_STATE = Object.freeze({
   x: 4.553215,
   y: 0,
   z: -0.945,
-  rotationY: 0
+  rotationY: 0,
+  lidsOpen: false
 });
 
 const CENTRO_VARIANTS = Object.freeze({
@@ -316,6 +317,7 @@ const dishwasherToggleBtn = document.getElementById('dishwasherToggleBtn');
 const addSofaBtn = document.getElementById('addSofaBtn');
 const sofaWidthButtons = [...document.querySelectorAll('[data-sofa-width]')];
 const addDaybedBtn = document.getElementById('addDaybedBtn');
+const daybedLidToggleBtn = document.getElementById('daybedLidToggleBtn');
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -664,6 +666,28 @@ function bindUI() {
     saveDaybedState(daybed);
     selectEditable(daybed);
     syncLibraryUI();
+  });
+
+  daybedLidToggleBtn?.addEventListener('click', () => {
+    let daybed = getCurrentDaybed();
+
+    if (!daybed) {
+      const saved = readDaybedState();
+      const state = saved ? { ...saved, exists: true } : DAYBED_DEFAULT_STATE;
+      daybed = createW3WindowDaybed();
+      applyDaybedState(daybed, state);
+      editableRoot.add(daybed);
+    }
+
+    const nextOpen = !daybed.userData.lidsOpen;
+    applyDaybedLidState(daybed, nextOpen, true);
+    selectEditable(daybed);
+
+    setStatus(
+      nextOpen
+        ? 'W3 臥榻 · 三片上掀已開啟，可查看收納空間'
+        : 'W3 臥榻 · 三片上蓋已關閉'
+    );
   });
 
   materialPresetButtons.forEach(button => {
@@ -1301,6 +1325,20 @@ function syncLibraryUI() {
       button.dataset.sofaWidth === sofaWidthPreset
     );
   });
+
+  const daybed = getCurrentDaybed();
+  const savedDaybed = readDaybedState();
+  const lidsOpen =
+    daybed?.userData?.lidsOpen ??
+    savedDaybed?.lidsOpen ??
+    DAYBED_DEFAULT_STATE.lidsOpen;
+
+  if (daybedLidToggleBtn) {
+    daybedLidToggleBtn.classList.toggle('selected', lidsOpen);
+    daybedLidToggleBtn.textContent = lidsOpen
+      ? '關閉三片上蓋'
+      : '上掀展示';
+  }
 
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
@@ -2044,7 +2082,8 @@ function readDaybedState() {
       z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : DAYBED_DEFAULT_STATE.z,
       rotationY: Number.isFinite(Number(parsed.rotationY))
         ? Number(parsed.rotationY)
-        : DAYBED_DEFAULT_STATE.rotationY
+        : DAYBED_DEFAULT_STATE.rotationY,
+      lidsOpen: parsed.lidsOpen === true
     };
   } catch (error) {
     console.warn('Unable to read W3 daybed state.', error);
@@ -2059,7 +2098,8 @@ function writeDaybedState(state) {
       x: Number(state.x),
       y: 0,
       z: Number(state.z),
-      rotationY: Number(state.rotationY)
+      rotationY: Number(state.rotationY),
+      lidsOpen: state.lidsOpen === true
     }));
     return true;
   } catch (error) {
@@ -2076,7 +2116,8 @@ function saveDaybedState(daybed) {
     x: daybed.position.x,
     y: 0,
     z: daybed.position.z,
-    rotationY: daybed.rotation.y
+    rotationY: daybed.rotation.y,
+    lidsOpen: daybed.userData.lidsOpen === true
   });
 
   if (saved) daybed.userData.hasSavedPlacement = true;
@@ -2100,6 +2141,7 @@ function applyDaybedState(daybed, state) {
   daybed.rotation.set(0, next.rotationY, 0);
   daybed.userData.floorY = 0;
   daybed.userData.hasSavedPlacement = Boolean(state);
+  applyDaybedLidState(daybed, next.lidsOpen === true, false);
 }
 
 function restoreOrCreateDaybed() {
@@ -3222,111 +3264,273 @@ function setKitchenCountertopFromLibrary(countertopId) {
 }
 
 function createW3WindowDaybed() {
-  // W3 niche measured directly from the converted apartment geometry:
-  // left interior wall face  x = 3.202 m
-  // right interior wall face x = 5.904 m
-  // => clear wall-to-wall span = 2.702 m.
-  //
-  // User requirement: ONLY a timber slab / daybed top. No cabinet base,
-  // no cushion and no pillows.
+  // W3 clear span: x=3.202m to x=5.904m => 2.702m wall-to-wall.
+  // Built-in storage daybed with THREE independent top-hinged lids.
   const width = 2.702;
   const depth = 0.62;
-  const slabThickness = 0.045;
   const topHeight = 0.44;
+  const lidThickness = 0.040;
+  const carcassHeight = topHeight - lidThickness;
+  const panelThickness = 0.018;
+  const lidGap = 0.004;
 
   const group = new THREE.Group();
-  group.name = 'W3_Window_Timber_Daybed_Slab';
+  group.name = 'W3_Window_3Lift_Storage_Daybed';
   group.userData.editable = true;
   group.userData.componentId = 'w3-window-daybed';
-  group.userData.label = 'W3 窗邊木作臥榻板';
+  group.userData.label = 'W3 窗邊三片上掀收納臥榻';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
-
-  // Slightly shrink the collision envelope by 2 mm so the built-in can sit
-  // exactly between the two side walls without fighting the wall-collision
-  // safety gap used by freestanding furniture.
   group.userData.wallClearance = -0.002;
-
+  group.userData.lidsOpen = false;
   group.userData.productSize = {
     width,
     depth,
-    thickness: slabThickness,
-    topHeight
+    topHeight,
+    lidThickness,
+    lidCount: 3
   };
-
-  const oakTexture = getWoodTexture('light-oak', 'roomDoor');
 
   const oakMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.70,
     metalness: 0,
-    map: oakTexture
+    map: getWoodTexture('light-oak', 'roomDoor')
   });
 
-  // Main wood slab.
-  const slab = new THREE.Mesh(
-    new RoundedBoxGeometry(
-      width,
-      slabThickness,
-      depth,
-      5,
-      0.010
-    ),
-    oakMat
-  );
-  slab.position.set(
-    0,
-    topHeight - slabThickness / 2,
-    0
-  );
-  slab.castShadow = true;
-  slab.receiveShadow = true;
-  slab.name = 'W3_daybed_timber_slab';
-  group.add(slab);
-
-  // A very thin darker front edge gives the wood board believable thickness
-  // without adding cabinets or visible supports.
-  const edgeMat = new THREE.MeshStandardMaterial({
-    color: 0xb99368,
-    roughness: 0.74,
+  const carcassMat = new THREE.MeshStandardMaterial({
+    color: 0xf0efeb,
+    roughness: 0.80,
     metalness: 0
   });
 
-  const frontEdge = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      width - 0.004,
-      slabThickness - 0.008,
-      0.010
-    ),
-    edgeMat
-  );
-  frontEdge.position.set(
-    0,
-    topHeight - slabThickness / 2,
-    -depth / 2 - 0.003
-  );
-  frontEdge.castShadow = true;
-  frontEdge.name = 'W3_daybed_front_edge';
-  group.add(frontEdge);
+  const interiorMat = new THREE.MeshStandardMaterial({
+    color: 0xd8d4cc,
+    roughness: 0.84,
+    metalness: 0
+  });
 
-  // Hidden selection proxy only; not included in collision bounds.
+  const seamMat = new THREE.MeshStandardMaterial({
+    color: 0x9d866c,
+    roughness: 0.78,
+    metalness: 0
+  });
+
+  const hingeMat = new THREE.MeshStandardMaterial({
+    color: 0x7a7d7d,
+    metalness: 0.65,
+    roughness: 0.38
+  });
+
+  function addBox(w, h, d, x, y, z, material, name='') {
+    const mesh = new THREE.Mesh(
+      new RoundedBoxGeometry(w, h, d, 4, Math.min(0.008, h * 0.18)),
+      material
+    );
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = name;
+    group.add(mesh);
+    return mesh;
+  }
+
+  // Storage box shell. The room-facing front is one clean uninterrupted panel:
+  // no drawers and no exposed cabinet doors.
+  addBox(
+    width,
+    panelThickness,
+    depth - 0.035,
+    0,
+    panelThickness / 2,
+    0.012,
+    interiorMat,
+    'Daybed_storage_bottom'
+  );
+
+  addBox(
+    width,
+    carcassHeight - panelThickness,
+    panelThickness,
+    0,
+    panelThickness + (carcassHeight - panelThickness) / 2,
+    -depth / 2 + panelThickness / 2,
+    carcassMat,
+    'Daybed_storage_front'
+  );
+
+  addBox(
+    width,
+    carcassHeight - panelThickness,
+    panelThickness,
+    0,
+    panelThickness + (carcassHeight - panelThickness) / 2,
+    depth / 2 - panelThickness / 2,
+    carcassMat,
+    'Daybed_storage_back'
+  );
+
+  [-width/2 + panelThickness/2, width/2 - panelThickness/2].forEach((x, idx) => {
+    addBox(
+      panelThickness,
+      carcassHeight - panelThickness,
+      depth - panelThickness*2,
+      x,
+      panelThickness + (carcassHeight - panelThickness) / 2,
+      0,
+      carcassMat,
+      'Daybed_storage_side_' + idx
+    );
+  });
+
+  // Two internal dividers produce three actual storage compartments.
+  const compartmentW = width / 3;
+  [-compartmentW / 2, compartmentW / 2].forEach((x, idx) => {
+    addBox(
+      panelThickness,
+      carcassHeight - 0.035,
+      depth - panelThickness*2,
+      x,
+      panelThickness + (carcassHeight - 0.035) / 2,
+      0,
+      interiorMat,
+      'Daybed_storage_divider_' + idx
+    );
+  });
+
+  // Slight recessed toe shadow so the built-in reads as millwork, not a block.
+  addBox(
+    width - 0.06,
+    0.055,
+    0.035,
+    0,
+    0.035,
+    -depth / 2 - 0.002,
+    seamMat,
+    'Daybed_toe_shadow'
+  );
+
+  // Three independent timber lids. Each hinge pivot sits at the rear edge;
+  // positive X rotation raises the room-facing/front edge.
+  const lidPivots = [];
+  const lidW = (width - lidGap * 4) / 3;
+  const rearZ = depth / 2;
+
+  for (let i = 0; i < 3; i++) {
+    const x =
+      -width / 2 +
+      lidGap +
+      lidW / 2 +
+      i * (lidW + lidGap);
+
+    const pivot = new THREE.Group();
+    pivot.name = 'Daybed_lid_pivot_' + i;
+    pivot.position.set(
+      x,
+      topHeight - lidThickness / 2,
+      rearZ
+    );
+
+    const lid = new THREE.Mesh(
+      new RoundedBoxGeometry(
+        lidW,
+        lidThickness,
+        depth - 0.010,
+        5,
+        0.010
+      ),
+      oakMat
+    );
+    lid.position.set(
+      0,
+      0,
+      -(depth - 0.010) / 2
+    );
+    lid.castShadow = true;
+    lid.receiveShadow = true;
+    lid.name = 'Daybed_lift_lid_' + i;
+    pivot.add(lid);
+
+    // Discreet finger recess on the front edge.
+    const fingerPull = new THREE.Mesh(
+      new RoundedBoxGeometry(
+        0.090,
+        0.010,
+        0.012,
+        3,
+        0.004
+      ),
+      seamMat
+    );
+    fingerPull.position.set(
+      0,
+      -lidThickness / 2 + 0.004,
+      -(depth - 0.010) + 0.010
+    );
+    fingerPull.name = 'Daybed_finger_pull_' + i;
+    pivot.add(fingerPull);
+
+    // Hidden rear hinge cylinders, only clearly visible when the lid is open.
+    [-lidW*0.28, lidW*0.28].forEach((hx, hIdx) => {
+      const hinge = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.010, 0.010, 0.060, 18),
+        hingeMat
+      );
+      hinge.rotation.z = Math.PI / 2;
+      hinge.position.set(
+        hx,
+        -lidThickness / 2 - 0.008,
+        -0.018
+      );
+      hinge.name = 'Daybed_hidden_hinge_' + i + '_' + hIdx;
+      pivot.add(hinge);
+    });
+
+    group.add(pivot);
+    lidPivots.push(pivot);
+  }
+
+  group._lidPivots = lidPivots;
+
+  // Hidden pick proxy. It stays low so opened lids don't make mobile selection
+  // awkward and is excluded from collision bounds.
   const pickProxy = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      width,
-      0.18,
-      depth
-    ),
+    new THREE.BoxGeometry(width, topHeight, depth),
     new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
       depthWrite: false
     })
   );
-  pickProxy.position.y = topHeight - 0.07;
+  pickProxy.position.y = topHeight / 2;
   pickProxy.userData.pickProxy = true;
   group.add(pickProxy);
 
+  applyDaybedLidState(group, false, false);
   return group;
+}
+
+function applyDaybedLidState(daybed, open, save = true) {
+  if (!daybed) return false;
+
+  const isOpen = open === true;
+  const angle = isOpen
+    ? THREE.MathUtils.degToRad(67)
+    : 0;
+
+  (daybed._lidPivots || []).forEach(pivot => {
+    pivot.rotation.x = angle;
+  });
+
+  daybed.userData.lidsOpen = isOpen;
+  daybed.updateMatrixWorld(true);
+
+  if (save) {
+    saveDaybedState(daybed);
+  }
+
+  syncLibraryUI();
+  return true;
 }
 
 function getSofaFabricBumpTexture() {
@@ -4703,7 +4907,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-timber-slab-flush-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-three-lift-storage-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
