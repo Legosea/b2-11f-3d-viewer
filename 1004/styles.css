@@ -311,3 +311,9 @@ button,input{font:inherit}
   border-radius:1px;background:#ad875c
 }
 .daybed-icon span{display:none}
+
+#daybedLidToggleBtn.selected{
+  border-color:#8f775f;
+  background:#eee6dc;
+  color:#5e5042
+}
