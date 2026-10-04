@@ -38,6 +38,22 @@ const COMPONENT_LIBRARY = Object.freeze({
       model: 'NA-V170RPH',
       label: 'Panasonic NA-V170RPH',
       variants: ['black', 'white']
+    },
+    {
+      id: 'panasonic-nr-f552yt',
+      brand: 'Panasonic',
+      model: 'NR-F552YT',
+      label: 'Panasonic NR-F552YT',
+      variants: ['s1-silver', 'c1-beige-gray', 'w1-frost-white']
+    }
+  ],
+  kitchens: [
+    {
+      id: 'cleanup-centro-207',
+      brand: 'Cleanup',
+      model: 'CENTRO',
+      label: 'Cleanup CENTRO 一字型 207 cm',
+      variants: ['ar8-raster-silver', 'cpb-wood', 'ak6-stainless']
     }
   ],
   furniture: []
@@ -104,6 +120,68 @@ const MATERIAL_DEFAULT_STATE = Object.freeze({
   roomDoor: 'natural-wood'
 });
 
+const KITCHEN_STORAGE_KEY = 'b2-11f-1004.cleanup-centro.v1';
+const FRIDGE_STORAGE_KEY = 'b2-11f-1004.panasonic-nr-f552yt.v1';
+
+const KITCHEN_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  variant: 'ar8-raster-silver'
+});
+
+const FRIDGE_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 7.20,
+  y: 0,
+  z: -5.83,
+  rotationY: 0,
+  variant: 's1-silver'
+});
+
+const CENTRO_VARIANTS = Object.freeze({
+  'ar8-raster-silver': {
+    label: 'AR8 光柵銀',
+    color: 0xaeb2b4,
+    metalness: 0.42,
+    roughness: 0.40,
+    texture: null
+  },
+  'cpb-wood': {
+    label: 'CPB 木紋',
+    color: 0xffffff,
+    metalness: 0.02,
+    roughness: 0.72,
+    texture: 'natural-wood'
+  },
+  'ak6-stainless': {
+    label: 'AK6 銀白不鏽鋼',
+    color: 0xc4c7c7,
+    metalness: 0.68,
+    roughness: 0.32,
+    texture: null
+  }
+});
+
+const FRIDGE_VARIANTS = Object.freeze({
+  's1-silver': {
+    label: '星礦銀 S1',
+    color: 0xb5b8bb,
+    metalness: 0.42,
+    roughness: 0.34
+  },
+  'c1-beige-gray': {
+    label: '淺灰米 C1',
+    color: 0xc8bfb3,
+    metalness: 0.22,
+    roughness: 0.40
+  },
+  'w1-frost-white': {
+    label: '凝霜白 W1',
+    color: 0xebe9e3,
+    metalness: 0.14,
+    roughness: 0.42
+  }
+});
+
 const viewport = document.getElementById('viewport');
 const fileInput = document.getElementById('fileInput');
 const welcomeFileInput = document.getElementById('welcomeFileInput');
@@ -133,6 +211,10 @@ const libraryTabButtons = [...document.querySelectorAll('[data-library-tab]')];
 const librarySections = [...document.querySelectorAll('[data-library-section]')];
 const washerVariantButtons = [...document.querySelectorAll('[data-washer-variant]')];
 const materialPresetButtons = [...document.querySelectorAll('[data-material-scope][data-material-preset]')];
+const addFridgeBtn = document.getElementById('addFridgeBtn');
+const fridgeVariantButtons = [...document.querySelectorAll('[data-fridge-variant]')];
+const addKitchenBtn = document.getElementById('addKitchenBtn');
+const kitchenVariantButtons = [...document.querySelectorAll('[data-kitchen-variant]')];
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -335,6 +417,58 @@ function bindUI() {
     button.addEventListener('click', () => {
       setWasherVariantFromLibrary(button.dataset.washerVariant);
     });
+  });
+
+  fridgeVariantButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setFridgeVariantFromLibrary(button.dataset.fridgeVariant);
+    });
+  });
+
+  kitchenVariantButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setKitchenVariantFromLibrary(button.dataset.kitchenVariant);
+    });
+  });
+
+  addFridgeBtn?.addEventListener('click', () => {
+    const existing = getCurrentFridge();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('Panasonic NR-F552YT 已存在 · 已選取');
+      return;
+    }
+
+    const saved = readSavedFridgeState();
+    const fridge = createPanasonicFridge();
+
+    if (saved) {
+      applyFridgeState(fridge, { ...saved, exists: true });
+    } else {
+      applyFridgeState(fridge, FRIDGE_DEFAULT_STATE);
+    }
+
+    editableRoot.add(fridge);
+    saveFridgeState(fridge);
+    selectEditable(fridge);
+    syncLibraryUI();
+  });
+
+  addKitchenBtn?.addEventListener('click', () => {
+    const existing = getCurrentKitchen();
+    if (existing) {
+      setStatus('Cleanup CENTRO 已放置於客廳牆面');
+      return;
+    }
+
+    const kitchen = createCentroKitchen();
+    const saved = readKitchenState() || KITCHEN_DEFAULT_STATE;
+    applyKitchenVariant(kitchen, saved.variant, false);
+    kitchen.userData.variant = saved.variant;
+    modelRoot.add(kitchen);
+    writeKitchenState({ exists: true, variant: saved.variant });
+    syncLibraryUI();
+    setStatus('Cleanup CENTRO 已放回客廳牆面');
   });
 
   materialPresetButtons.forEach(button => {
@@ -852,6 +986,22 @@ function syncLibraryUI() {
     button.classList.toggle('selected', button.dataset.washerVariant === variant);
   });
 
+  const fridge = getCurrentFridge();
+  const savedFridge = readSavedFridgeState();
+  const fridgeVariant = fridge?.userData?.variant || savedFridge?.variant || FRIDGE_DEFAULT_STATE.variant;
+
+  fridgeVariantButtons.forEach(button => {
+    button.classList.toggle('selected', button.dataset.fridgeVariant === fridgeVariant);
+  });
+
+  const kitchen = getCurrentKitchen();
+  const savedKitchen = readKitchenState();
+  const kitchenVariant = kitchen?.userData?.variant || savedKitchen?.variant || KITCHEN_DEFAULT_STATE.variant;
+
+  kitchenVariantButtons.forEach(button => {
+    button.classList.toggle('selected', button.dataset.kitchenVariant === kitchenVariant);
+  });
+
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
     const scope = button.dataset.materialScope;
@@ -986,6 +1136,148 @@ function setWasherVariantFromLibrary(variantId) {
   );
 }
 
+function readKitchenState() {
+  try {
+    const raw = localStorage.getItem(KITCHEN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      variant: CENTRO_VARIANTS[parsed.variant]
+        ? parsed.variant
+        : KITCHEN_DEFAULT_STATE.variant
+    };
+  } catch (error) {
+    console.warn('Unable to read CENTRO state.', error);
+    return null;
+  }
+}
+
+function writeKitchenState(state) {
+  try {
+    localStorage.setItem(KITCHEN_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      variant: CENTRO_VARIANTS[state.variant]
+        ? state.variant
+        : KITCHEN_DEFAULT_STATE.variant
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist CENTRO state.', error);
+    return false;
+  }
+}
+
+function readSavedFridgeState() {
+  try {
+    const raw = localStorage.getItem(FRIDGE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : FRIDGE_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : FRIDGE_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : FRIDGE_DEFAULT_STATE.rotationY,
+      variant: FRIDGE_VARIANTS[parsed.variant]
+        ? parsed.variant
+        : FRIDGE_DEFAULT_STATE.variant
+    };
+  } catch (error) {
+    console.warn('Unable to read fridge state.', error);
+    return null;
+  }
+}
+
+function writeFridgeState(state) {
+  try {
+    localStorage.setItem(FRIDGE_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY),
+      variant: FRIDGE_VARIANTS[state.variant]
+        ? state.variant
+        : FRIDGE_DEFAULT_STATE.variant
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist fridge state.', error);
+    return false;
+  }
+}
+
+function saveFridgeState(fridge) {
+  if (!fridge) return false;
+  return writeFridgeState({
+    exists: true,
+    x: fridge.position.x,
+    y: 0,
+    z: fridge.position.z,
+    rotationY: fridge.rotation.y,
+    variant: fridge.userData.variant || FRIDGE_DEFAULT_STATE.variant
+  });
+}
+
+function saveFridgeDeletedState() {
+  const current = readSavedFridgeState() || FRIDGE_DEFAULT_STATE;
+  return writeFridgeState({ ...current, exists: false });
+}
+
+function getCurrentFridge() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'panasonic-nr-f552yt'
+  ) || null;
+}
+
+function getCurrentKitchen() {
+  return modelRoot?.children.find(
+    child => child.userData?.componentId === 'cleanup-centro-207'
+  ) || null;
+}
+
+function applyFridgeState(fridge, state) {
+  const next = state || FRIDGE_DEFAULT_STATE;
+  fridge.position.set(next.x, 0, next.z);
+  fridge.rotation.set(0, next.rotationY, 0);
+  fridge.userData.floorY = 0;
+  fridge.userData.hasSavedPlacement = Boolean(state);
+  applyFridgeVariant(fridge, next.variant || FRIDGE_DEFAULT_STATE.variant, false);
+}
+
+function restoreOrCreateFridge() {
+  const saved = readSavedFridgeState();
+  if (saved?.exists === false) return null;
+
+  const fridge = createPanasonicFridge();
+  applyFridgeState(fridge, saved || FRIDGE_DEFAULT_STATE);
+  editableRoot.add(fridge);
+
+  if (!saved) saveFridgeState(fridge);
+  return fridge;
+}
+
+function restoreOrCreateKitchen() {
+  const saved = readKitchenState();
+  if (saved?.exists === false) return null;
+
+  const kitchen = createCentroKitchen();
+  const variant = saved?.variant || KITCHEN_DEFAULT_STATE.variant;
+  applyKitchenVariant(kitchen, variant, false);
+  kitchen.userData.variant = variant;
+  modelRoot.add(kitchen);
+
+  if (!saved) writeKitchenState({ exists: true, variant });
+  return kitchen;
+}
+
 function normalizeRadians(angle) {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
@@ -1025,10 +1317,12 @@ function applyRoomAngleMagnet(object, onRelease = false) {
 function saveEditableState(object) {
   if (!object) return false;
 
-  // The current project only has a persisted washer. Keeping this dispatcher
-  // generic means future furniture/appliances can plug in their own storage.
-  if (object.userData?.label === 'Panasonic NA-V170RPH-K') {
+  if (object.userData?.componentId === 'panasonic-na-v170rph') {
     return saveWasherState(object);
+  }
+
+  if (object.userData?.componentId === 'panasonic-nr-f552yt') {
+    return saveFridgeState(object);
   }
 
   return false;
@@ -1133,6 +1427,460 @@ function restoreOrCreateWasher() {
   if (!saved) saveWasherState(washer);
 
   return washer;
+}
+
+function createCentroKitchen() {
+  // Wall measured from the current 1004 model:
+  // room door ends around x=4.67m; entrance-side door/wall begins near x=7.85m.
+  // Use a 207cm straight CENTRO run + a separate 70cm-class refrigerator bay.
+  const width = 2.07;
+  const depth = 0.65;
+  const baseHeight = 0.86;
+  const counterThickness = 0.035;
+  const wallCabinetDepth = 0.35;
+  const wallCabinetHeight = 0.62;
+
+  const group = new THREE.Group();
+  group.name = 'Cleanup_CENTRO_207';
+  group.userData.componentId = 'cleanup-centro-207';
+  group.userData.label = 'Cleanup CENTRO 一字型 207 cm';
+  group.userData.variant = KITCHEN_DEFAULT_STATE.variant;
+
+  // Placement on the user-marked living-room wall.
+  group.position.set(4.72, 0, -6.17);
+
+  const cabinetMat = new THREE.MeshStandardMaterial({
+    color: 0xaeb2b4,
+    metalness: 0.42,
+    roughness: 0.40
+  });
+
+  const sideMat = cabinetMat;
+  const counterMat = new THREE.MeshStandardMaterial({
+    color: 0xc9c6c0,
+    metalness: 0.04,
+    roughness: 0.34
+  });
+  const stainlessMat = new THREE.MeshStandardMaterial({
+    color: 0xa8afb2,
+    metalness: 0.78,
+    roughness: 0.28
+  });
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: 0x17191a,
+    metalness: 0.24,
+    roughness: 0.32
+  });
+  const backsplashMat = new THREE.MeshStandardMaterial({
+    color: 0xdedbd5,
+    metalness: 0.02,
+    roughness: 0.58
+  });
+
+  function addBox(w, h, d, x, y, z, material, name='') {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = name;
+    group.add(mesh);
+    return mesh;
+  }
+
+  // Base carcass, front faces point +Z.
+  addBox(width, baseHeight, depth, width/2, baseHeight/2, depth/2, sideMat, 'CENTRO_base');
+
+  // Toe kick.
+  addBox(width - 0.04, 0.08, 0.05, width/2, 0.04, depth + 0.005, darkMat, 'CENTRO_toekick');
+
+  // Three equal working zones: cook / prep / sink.
+  const moduleW = width / 3;
+  for (let i = 0; i < 3; i++) {
+    const cx = moduleW * i + moduleW / 2;
+
+    // Drawer fronts.
+    [0.18, 0.42, 0.68].forEach((cy, row) => {
+      const h = row === 0 ? 0.16 : 0.22;
+      addBox(
+        moduleW - 0.018,
+        h,
+        0.018,
+        cx,
+        cy,
+        depth + 0.012,
+        cabinetMat,
+        'CENTRO_drawer'
+      );
+    });
+
+    // Hidden handle line.
+    addBox(
+      moduleW - 0.035,
+      0.012,
+      0.012,
+      cx,
+      0.785,
+      depth + 0.026,
+      darkMat,
+      'CENTRO_handle'
+    );
+  }
+
+  // Countertop.
+  addBox(
+    width + 0.035,
+    counterThickness,
+    depth + 0.035,
+    width/2,
+    baseHeight + counterThickness/2,
+    depth/2 + 0.012,
+    counterMat,
+    'CENTRO_countertop'
+  );
+
+  // Low backsplash.
+  addBox(
+    width,
+    0.58,
+    0.018,
+    width/2,
+    1.18,
+    0.012,
+    backsplashMat,
+    'CENTRO_backsplash'
+  );
+
+  // Induction cooktop on left module.
+  addBox(
+    moduleW * 0.72,
+    0.018,
+    0.46,
+    moduleW * 0.50,
+    baseHeight + counterThickness + 0.012,
+    depth * 0.52,
+    darkMat,
+    'CENTRO_induction'
+  );
+
+  // Two subtle burner rings.
+  [moduleW*0.36, moduleW*0.64].forEach(px => {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.095, 0.006, 10, 40),
+      new THREE.MeshStandardMaterial({
+        color: 0x565a5b,
+        metalness: 0.45,
+        roughness: 0.38
+      })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(px, baseHeight + counterThickness + 0.024, depth * 0.52);
+    group.add(ring);
+  });
+
+  // Sink on right module.
+  const sinkX = moduleW * 2.5;
+  addBox(
+    moduleW * 0.68,
+    0.025,
+    0.42,
+    sinkX,
+    baseHeight + counterThickness + 0.008,
+    depth * 0.52,
+    stainlessMat,
+    'CENTRO_sink'
+  );
+
+  // Sink inset.
+  const sinkInset = addBox(
+    moduleW * 0.55,
+    0.035,
+    0.31,
+    sinkX,
+    baseHeight + counterThickness + 0.018,
+    depth * 0.52,
+    new THREE.MeshStandardMaterial({
+      color: 0x6f777a,
+      metalness: 0.75,
+      roughness: 0.34
+    }),
+    'CENTRO_sink_bowl'
+  );
+
+  // Faucet: vertical stem + spout.
+  const faucetStem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.018, 0.018, 0.30, 20),
+    stainlessMat
+  );
+  faucetStem.position.set(
+    sinkX + moduleW * 0.22,
+    baseHeight + 0.18,
+    depth * 0.30
+  );
+  group.add(faucetStem);
+
+  const faucetSpout = new THREE.Mesh(
+    new THREE.TorusGeometry(0.10, 0.014, 10, 32, Math.PI),
+    stainlessMat
+  );
+  faucetSpout.rotation.z = Math.PI / 2;
+  faucetSpout.position.set(
+    sinkX + moduleW * 0.22,
+    baseHeight + 0.32,
+    depth * 0.36
+  );
+  group.add(faucetSpout);
+
+  // Upper cabinets / range hood.
+  const upperY = 1.88;
+  addBox(
+    moduleW - 0.015,
+    wallCabinetHeight,
+    wallCabinetDepth,
+    moduleW * 1.5,
+    upperY,
+    wallCabinetDepth/2,
+    cabinetMat,
+    'CENTRO_upper'
+  );
+  addBox(
+    moduleW - 0.015,
+    wallCabinetHeight,
+    wallCabinetDepth,
+    moduleW * 2.5,
+    upperY,
+    wallCabinetDepth/2,
+    cabinetMat,
+    'CENTRO_upper'
+  );
+
+  const hood = addBox(
+    moduleW * 0.82,
+    0.16,
+    0.45,
+    moduleW * 0.5,
+    1.73,
+    0.25,
+    darkMat,
+    'CENTRO_hood'
+  );
+
+  // Under-cabinet task light strip.
+  const stripMat = new THREE.MeshStandardMaterial({
+    color: 0xfff4df,
+    emissive: 0xffe3b8,
+    emissiveIntensity: 0.72,
+    roughness: 0.45
+  });
+  addBox(
+    width * 0.62,
+    0.016,
+    0.03,
+    width * 0.69,
+    1.57,
+    0.35,
+    stripMat,
+    'CENTRO_underlight'
+  );
+
+  group._variantMaterials = { cabinet: cabinetMat };
+  applyKitchenVariant(group, KITCHEN_DEFAULT_STATE.variant, false);
+  return group;
+}
+
+function applyKitchenVariant(kitchen, variantId, save = true) {
+  if (!kitchen) return false;
+
+  const variant = CENTRO_VARIANTS[variantId] || CENTRO_VARIANTS[KITCHEN_DEFAULT_STATE.variant];
+  const mat = kitchen._variantMaterials?.cabinet;
+  if (!mat) return false;
+
+  mat.metalness = variant.metalness;
+  mat.roughness = variant.roughness;
+
+  if (variant.texture) {
+    mat.map = getWoodTexture(variant.texture, 'roomDoor');
+    mat.color.setHex(0xffffff);
+  } else {
+    mat.map = null;
+    mat.color.setHex(variant.color);
+  }
+
+  mat.needsUpdate = true;
+  kitchen.userData.variant = CENTRO_VARIANTS[variantId]
+    ? variantId
+    : KITCHEN_DEFAULT_STATE.variant;
+
+  if (save) {
+    writeKitchenState({ exists: true, variant: kitchen.userData.variant });
+  }
+
+  syncLibraryUI();
+  return true;
+}
+
+function setKitchenVariantFromLibrary(variantId) {
+  let kitchen = getCurrentKitchen();
+
+  if (!kitchen) {
+    kitchen = createCentroKitchen();
+    modelRoot.add(kitchen);
+  }
+
+  applyKitchenVariant(kitchen, variantId, true);
+  setStatus('Cleanup CENTRO · ' + CENTRO_VARIANTS[variantId].label + ' · 已套用並記憶');
+}
+
+function createPanasonicFridge() {
+  // Panasonic NR-F552YT official overall dimensions:
+  // W650 x D699 x H1850 mm.
+  const width = 0.650;
+  const depth = 0.699;
+  const height = 1.850;
+
+  const group = new THREE.Group();
+  group.name = 'Panasonic_NR-F552YT';
+  group.userData.editable = true;
+  group.userData.componentId = 'panasonic-nr-f552yt';
+  group.userData.label = 'Panasonic NR-F552YT';
+  group.userData.variant = FRIDGE_DEFAULT_STATE.variant;
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0xb5b8bb,
+    metalness: 0.42,
+    roughness: 0.34
+  });
+  const gapMat = new THREE.MeshStandardMaterial({
+    color: 0x292b2c,
+    metalness: 0.18,
+    roughness: 0.44
+  });
+  const displayMat = new THREE.MeshStandardMaterial({
+    color: 0x273035,
+    emissive: 0x1e3843,
+    emissiveIntensity: 0.22,
+    roughness: 0.28
+  });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), bodyMat);
+  body.position.y = height / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  const frontZ = depth / 2 + 0.010;
+  const margin = 0.014;
+
+  function addFrontPanel(w, h, x, y, name) {
+    const panel = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, 0.018),
+      bodyMat
+    );
+    panel.position.set(x, y, frontZ);
+    panel.castShadow = true;
+    panel.receiveShadow = true;
+    panel.name = name;
+    group.add(panel);
+    return panel;
+  }
+
+  // Six-door visual layout.
+  const upperH = 0.79;
+  const midH = 0.35;
+  const lowerH = 0.46;
+  const upperY = height - upperH/2 - 0.02;
+  const midY = lowerH + midH/2 + 0.18;
+  const lowerY = lowerH/2 + 0.04;
+
+  addFrontPanel(width/2 - 0.020, upperH, -width/4, upperY, 'Fridge_upper_left');
+  addFrontPanel(width/2 - 0.020, upperH,  width/4, upperY, 'Fridge_upper_right');
+
+  addFrontPanel(width/2 - 0.020, midH, -width/4, midY, 'Fridge_mid_left');
+  addFrontPanel(width/2 - 0.020, midH,  width/4, midY, 'Fridge_mid_right');
+
+  addFrontPanel(width/2 - 0.020, lowerH, -width/4, lowerY, 'Fridge_lower_left');
+  addFrontPanel(width/2 - 0.020, lowerH,  width/4, lowerY, 'Fridge_lower_right');
+
+  // Door seams / handleless shadow gaps.
+  [height-upperH-0.035, lowerH+midH+0.10, lowerH+0.045].forEach(y => {
+    const seam = new THREE.Mesh(
+      new THREE.BoxGeometry(width*0.94, 0.010, 0.026),
+      gapMat
+    );
+    seam.position.set(0, y, frontZ + 0.014);
+    group.add(seam);
+  });
+
+  const verticalSeam = new THREE.Mesh(
+    new THREE.BoxGeometry(0.009, height*0.93, 0.025),
+    gapMat
+  );
+  verticalSeam.position.set(0, height*0.52, frontZ + 0.014);
+  group.add(verticalSeam);
+
+  // Door-edge touch panel.
+  const display = new THREE.Mesh(
+    new THREE.BoxGeometry(0.045, 0.16, 0.012),
+    displayMat
+  );
+  display.position.set(width*0.39, height*0.71, frontZ + 0.023);
+  group.add(display);
+
+  // Mobile pick proxy.
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(width*1.03, height*1.02, depth*1.03),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+  );
+  pickProxy.position.y = height/2;
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  group._variantMaterials = { body: bodyMat };
+  applyFridgeVariant(group, FRIDGE_DEFAULT_STATE.variant, false);
+  return group;
+}
+
+function applyFridgeVariant(fridge, variantId, save = true) {
+  if (!fridge) return false;
+
+  const variant = FRIDGE_VARIANTS[variantId] || FRIDGE_VARIANTS[FRIDGE_DEFAULT_STATE.variant];
+  const bodyMat = fridge._variantMaterials?.body;
+  if (!bodyMat) return false;
+
+  bodyMat.color.setHex(variant.color);
+  bodyMat.metalness = variant.metalness;
+  bodyMat.roughness = variant.roughness;
+  bodyMat.needsUpdate = true;
+
+  fridge.userData.variant = FRIDGE_VARIANTS[variantId]
+    ? variantId
+    : FRIDGE_DEFAULT_STATE.variant;
+
+  if (save) saveFridgeState(fridge);
+  syncLibraryUI();
+  return true;
+}
+
+function setFridgeVariantFromLibrary(variantId) {
+  let fridge = getCurrentFridge();
+
+  if (!fridge) {
+    const saved = readSavedFridgeState();
+    fridge = createPanasonicFridge();
+
+    if (saved) {
+      applyFridgeState(fridge, { ...saved, exists: true, variant: variantId });
+    } else {
+      applyFridgeState(fridge, { ...FRIDGE_DEFAULT_STATE, variant: variantId });
+    }
+
+    editableRoot.add(fridge);
+  }
+
+  applyFridgeVariant(fridge, variantId, true);
+  selectEditable(fridge);
+  setStatus('Panasonic NR-F552YT · ' + FRIDGE_VARIANTS[variantId].label + ' · 已套用並記憶');
 }
 
 function createPanasonicWasher() {
@@ -1341,13 +2089,22 @@ function deleteSelectedEditable() {
   if (!selectedEditable) return;
 
   const doomed = selectedEditable;
+  const label = doomed.userData?.label || '元件';
+  const componentId = doomed.userData?.componentId;
+
   transformControls.detach();
   selectedEditable = null;
   doomed.removeFromParent();
-  saveWasherDeletedState();
+
+  if (componentId === 'panasonic-na-v170rph') {
+    saveWasherDeletedState();
+  } else if (componentId === 'panasonic-nr-f552yt') {
+    saveFridgeDeletedState();
+  }
 
   objectToolbar?.classList.add('hidden');
-  setStatus('Panasonic NA-V170RPH-K 已刪除並記憶 · 可按「洗衣機」重新加入');
+  syncLibraryUI();
+  setStatus(label + ' 已刪除並記憶 · 可從元件庫重新加入');
 }
 
 function handleEditablePick(event) {
@@ -1968,7 +2725,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-woodgrain-threeviews-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-fridge-library-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -2015,6 +2772,8 @@ async function tryAutoLoadRepoModel() {
     modelRoot.add(gltf.scene);
     modelRoot.add(correctedW3);
 
+    const kitchen = restoreOrCreateKitchen();
+    const fridge = restoreOrCreateFridge();
     const washer = restoreOrCreateWasher();
     syncLibraryUI();
 
@@ -2026,15 +2785,9 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    if (washer) {
-      setStatus(
-        washer.userData.hasSavedPlacement
-          ? '1004 · Panasonic 洗衣機已還原上次位置 · 可移動 / 旋轉 / 刪除'
-          : '1004 · Panasonic 洗衣機已放置預設位置 · 可移動 / 旋轉 / 刪除'
-      );
-    } else {
-      setStatus('1004 · 洗衣機目前為已刪除狀態 · 按「洗衣機」可重新加入');
-    }
+    setStatus(
+      '1004 · Cleanup CENTRO + Panasonic NR-F552YT 已配置 · 元件庫可切換配色'
+    );
     fitCamera();
   } catch (error) {
     console.error(error);
