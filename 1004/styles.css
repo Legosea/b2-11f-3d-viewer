@@ -246,3 +246,20 @@ button,input{font:inherit}
   .library-tabs{grid-template-columns:repeat(4,1fr)}
   .library-tab{font-size:11px;padding-inline:2px}
 }
+
+.library-label-spaced{margin-top:12px}
+.stone-swatch.white-stone{
+  background:
+    linear-gradient(120deg,transparent 0 43%,rgba(120,116,108,.16) 44% 45%,transparent 46% 100%),
+    #e7e4de
+}
+.stone-swatch.greige-stone{
+  background:
+    linear-gradient(125deg,transparent 0 40%,rgba(84,78,72,.18) 41% 42%,transparent 43% 100%),
+    #b8afa4
+}
+.stone-swatch.charcoal-stone{
+  background:
+    linear-gradient(130deg,transparent 0 46%,rgba(235,232,225,.13) 47% 48%,transparent 49% 100%),
+    #555653
+}
