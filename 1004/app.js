@@ -2084,19 +2084,20 @@ function createCentroKitchen() {
     'CENTRO_backsplash'
   );
 
-  // IH cooktop.
+  // IH cooktop on the RIGHT module, matching the user's reference layout.
+  const cookX = moduleW * 2.5;
   addBox(
     moduleW * 0.72,
     0.018,
     0.46,
-    moduleW * 0.50,
+    cookX,
     baseHeight + counterThickness + 0.012,
     depth * 0.52,
     darkMat,
     'CENTRO_induction'
   );
 
-  [moduleW*0.36, moduleW*0.64].forEach(px => {
+  [cookX - moduleW*0.14, cookX + moduleW*0.14].forEach(px => {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.095, 0.006, 10, 40),
       new THREE.MeshStandardMaterial({
@@ -2110,8 +2111,8 @@ function createCentroKitchen() {
     assembly.add(ring);
   });
 
-  // Sink.
-  const sinkX = moduleW * 2.5;
+  // Sink on the LEFT module, with the centre module kept as prep space.
+  const sinkX = moduleW * 0.5;
   addBox(
     moduleW * 0.68,
     0.025,
@@ -2168,7 +2169,7 @@ function createCentroKitchen() {
     moduleW - 0.015,
     wallCabinetHeight,
     wallCabinetDepth,
-    moduleW * 1.5,
+    moduleW * 0.5,
     upperY,
     wallCabinetDepth/2,
     cabinetMat,
@@ -2178,18 +2179,19 @@ function createCentroKitchen() {
     moduleW - 0.015,
     wallCabinetHeight,
     wallCabinetDepth,
-    moduleW * 2.5,
+    moduleW * 1.5,
     upperY,
     wallCabinetDepth/2,
     cabinetMat,
     'CENTRO_upper'
   );
 
+  // Range hood aligned above the RIGHT-side cooktop.
   addBox(
     moduleW * 0.82,
     0.16,
     0.45,
-    moduleW * 0.5,
+    moduleW * 2.5,
     1.73,
     0.25,
     darkMat,
@@ -3403,7 +3405,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-wall-triangle-collision-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-sink-left-cook-right-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
