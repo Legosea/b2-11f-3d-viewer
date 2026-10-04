@@ -488,6 +488,168 @@ function applyPhotorealStyle(root) {
   });
 }
 
+function replaceLivingRoomW3(root) {
+  // W3 construction drawing:
+  // overall 268 x 190 cm, sill 50 cm above FL
+  // columns 79 / 110 / 79 cm
+  // rows 80 cm lower / 110 cm upper
+  //
+  // The converted GLB currently contains a 270.18 cm wide W3 with incorrect
+  // mullion proportions. Hide only those original W3 meshes and rebuild the
+  // frame in Three.js at the same architectural opening.
+
+  const oldW3MeshNames = new Set([
+    'n113__24_g0',
+    'n114__25_g0',
+    'n115__23_g0',
+    'n117__24_g0',
+    'n118__25_g0',
+    'n119__23_g0',
+    'n120__28_g0',
+    'n121__22_g0',
+    'n122__21_g0',
+    'n123__27_g0'
+  ]);
+
+  root.traverse(obj => {
+    if (obj.isMesh && oldW3MeshNames.has(obj.name)) {
+      obj.visible = false;
+    }
+  });
+
+  const group = new THREE.Group();
+  group.name = 'W3_LivingRoom_268x190';
+  group.userData.windowSchedule = {
+    id: 'W3',
+    overallWidthM: 2.68,
+    overallHeightM: 1.90,
+    sillHeightM: 0.50,
+    columnsM: [0.79, 1.10, 0.79],
+    rowsM: [0.80, 1.10]
+  };
+
+  // Existing opening centre measured from the converted model.
+  const centerX = 4.553215;
+  const centerZ = -0.5722;
+  const sillY = 0.50;
+  const width = 2.68;
+  const height = 1.90;
+  const leftX = centerX - width / 2;
+  const rightX = centerX + width / 2;
+  const bottomY = sillY;
+  const topY = sillY + height;
+
+  const splitX1 = leftX + 0.79;
+  const splitX2 = splitX1 + 1.10;
+  const splitY = bottomY + 0.80;
+
+  const outerBar = 0.052;
+  const mullionBar = 0.046;
+  const frameDepth = 0.10;
+  const glassDepth = 0.006;
+
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x343938,
+    metalness: 0.62,
+    roughness: 0.30
+  });
+
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xb9c8ca,
+    transparent: true,
+    opacity: 0.22,
+    roughness: 0.10,
+    metalness: 0,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+
+  function addFrameBar(w, h, x, y, depth = frameDepth, barWidthMaterial = frameMat) {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, depth),
+      barWidthMaterial
+    );
+    mesh.position.set(x, y, centerZ);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  }
+
+  function addGlass(x0, x1, y0, y1) {
+    const pad = 0.012;
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        Math.max(0.01, x1 - x0 - pad * 2),
+        Math.max(0.01, y1 - y0 - pad * 2),
+        glassDepth
+      ),
+      glassMat
+    );
+    mesh.position.set(
+      (x0 + x1) / 2,
+      (y0 + y1) / 2,
+      centerZ + 0.006
+    );
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    mesh.renderOrder = 1;
+    group.add(mesh);
+    return mesh;
+  }
+
+  // Outer perimeter: dimensions remain exactly 268 x 190 cm.
+  addFrameBar(width, outerBar, centerX, bottomY + outerBar / 2);
+  addFrameBar(width, outerBar, centerX, topY - outerBar / 2);
+  addFrameBar(outerBar, height - outerBar * 2, leftX + outerBar / 2, (bottomY + topY) / 2);
+  addFrameBar(outerBar, height - outerBar * 2, rightX - outerBar / 2, (bottomY + topY) / 2);
+
+  // 79 / 110 / 79 cm vertical divisions.
+  addFrameBar(mullionBar, height - outerBar * 2, splitX1, (bottomY + topY) / 2);
+  addFrameBar(mullionBar, height - outerBar * 2, splitX2, (bottomY + topY) / 2);
+
+  // 80 / 110 cm horizontal division.
+  addFrameBar(width - outerBar * 2, mullionBar, centerX, splitY);
+
+  // Fixed glazing: lower row all FIX; upper centre FIX.
+  const colBounds = [
+    [leftX + outerBar, splitX1 - mullionBar / 2],
+    [splitX1 + mullionBar / 2, splitX2 - mullionBar / 2],
+    [splitX2 + mullionBar / 2, rightX - outerBar]
+  ];
+
+  const lowerY0 = bottomY + outerBar;
+  const lowerY1 = splitY - mullionBar / 2;
+  const upperY0 = splitY + mullionBar / 2;
+  const upperY1 = topY - outerBar;
+
+  colBounds.forEach(([x0, x1]) => addGlass(x0, x1, lowerY0, lowerY1));
+  addGlass(colBounds[1][0], colBounds[1][1], upperY0, upperY1);
+
+  // Upper left and right are operable sashes. Add an inset sash perimeter,
+  // but do not draw the diagonal opening symbols from the shop drawing.
+  function addOperableSash(x0, x1) {
+    const inset = 0.055;
+    const sashBar = 0.030;
+    const sx0 = x0 + inset;
+    const sx1 = x1 - inset;
+    const sy0 = upperY0 + inset;
+    const sy1 = upperY1 - inset;
+
+    addGlass(sx0 + sashBar, sx1 - sashBar, sy0 + sashBar, sy1 - sashBar);
+
+    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy0 + sashBar / 2, 0.082);
+    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy1 - sashBar / 2, 0.082);
+    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx0 + sashBar / 2, (sy0 + sy1) / 2, 0.082);
+    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx1 - sashBar / 2, (sy0 + sy1) / 2, 0.082);
+  }
+
+  addOperableSash(colBounds[0][0], colBounds[0][1]);
+  addOperableSash(colBounds[2][0], colBounds[2][1]);
+
+  return group;
+}
+
 function kelvinToColor(kelvin) {
   const temp = kelvin / 100;
   let r, g, b;
@@ -812,7 +974,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-soft-ceiling-lighting-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-268x190-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -855,7 +1017,9 @@ async function tryAutoLoadRepoModel() {
     });
 
     applyPhotorealStyle(gltf.scene);
+    const correctedW3 = replaceLivingRoomW3(gltf.scene);
     modelRoot.add(gltf.scene);
+    modelRoot.add(correctedW3);
     welcome.classList.add('hidden');
     fitBtn.disabled = false;
     exportBtn.disabled = false;
@@ -864,7 +1028,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · 空屋擬真 · 西北向午後日照 + 柔和隱藏天花板照明');
+    setStatus('1004 · W3 已校正 268×190 cm · 窗台 50 cm · 79/110/79');
     fitCamera();
   } catch (error) {
     console.error(error);
