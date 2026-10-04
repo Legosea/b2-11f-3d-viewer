@@ -120,7 +120,7 @@ export function createViewer(container, caseData, options = {}) {
   // ---------- view state ----------
   let view = 'orbit';
   let focus = 'all';
-  let wallMode = 'cut';
+  let wallMode = 'full';
   let labelsVisible = false;
   let activeStyleId = styles[0]?.id || null;
 
