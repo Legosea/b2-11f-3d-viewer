@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "retained": {
+    "architectureRootGeometry": true,
+    "windowInstances": [
+      6,
+      7,
+      8,
+      13
+    ],
+    "balconyRailing": [
+      5
+    ],
+    "fixedBathroom": [
+      1,
+      2,
+      3,
+      15,
+      17
+    ]
+  },
+  "excluded": {
+    "doorLeaves": [
+      0,
+      4,
+      9,
+      10,
+      11,
+      12,
+      18
+    ],
+    "systemCabinetOrVanityGroups": [
+      14,
+      16
+    ],
+    "movableFurniture": "all"
+  },
+  "rationale": "Empty-shell v6: retain shell/opening frames/railing/structural and fixed sanitary/shower proxies; remove doors, furniture, refrigerator and cabinet/wardrobe-like assemblies."
+}

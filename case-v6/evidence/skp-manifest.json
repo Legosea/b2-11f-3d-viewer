@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "units": "m",
+  "definitions": 439,
+  "rootInstances": 19,
+  "rootGeometry": {
+    "vertices": 231,
+    "faces": 92
+  },
+  "sourceBounds": {
+    "min": [
+      0,
+      -0.0226,
+      0
+    ],
+    "max": [
+      11.14478848,
+      2.6,
+      6.41820408
+    ]
+  },
+  "note": "Source axes are SketchUp X/Y ground plane and Z vertical; runtime converts to Three.js Y-up."
+}

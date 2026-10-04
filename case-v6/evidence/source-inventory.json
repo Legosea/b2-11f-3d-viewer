@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "sourceFile": "1004.skp",
+  "privateSourceNotCommitted": true,
+  "sha256": "05f28af18fc5488090c3dc8c6c6320f572aade2366114b05ab06f8eb9b51e577",
+  "bytes": 99737749,
+  "sketchupVersion": "24.0.483",
+  "units": "Meter",
+  "archiveEntries": 707,
+  "modelDatBytes": 217200362,
+  "parser": "OpenSKP-compatible VFF/TLV extraction",
+  "parsedAt": "2026-10-04"
+}

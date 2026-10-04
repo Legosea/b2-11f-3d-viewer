@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "policy": "CAD/PDF dimensions override; SketchUp shape/topology override",
+  "floorToFloorM": {
+    "value": 3.3,
+    "status": "confirmed",
+    "source": "user/CAD"
+  },
+  "clearShellHeightM": {
+    "value": 2.6,
+    "status": "skp",
+    "note": "Not globally stretched to 3.3 m; floor-to-floor is recorded separately."
+  },
+  "W3": {
+    "sourceInstance": 13,
+    "sourceWidthM": 2.70181303615,
+    "calibratedWidthM": 2.68,
+    "heightM": 1.9,
+    "sillM": 0.5,
+    "headM": 2.4,
+    "horizontalM": [
+      0.79,
+      1.1,
+      0.79
+    ],
+    "verticalM": [
+      0.8,
+      1.1
+    ],
+    "status": "confirmed"
+  }
+}

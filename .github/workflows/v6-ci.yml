@@ -1,0 +1,21 @@
+name: v6 SketchUp 白模驗證
+on:
+  push:
+    branches: [feature/b2-v6-sketchup]
+    paths: ['viewer/**','case-v6/**','.github/workflows/v6-ci.yml']
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm, cache-dependency-path: viewer/package-lock.json}
+      - run: npm ci
+        working-directory: viewer
+      - name: v6 data tests
+        run: node --test tests/v6-*.test.mjs
+        working-directory: viewer
+      - name: v6 build
+        run: npm run build
+        working-directory: viewer
