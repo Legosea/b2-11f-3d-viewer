@@ -3306,6 +3306,8 @@ function createIjaReimsSofa(widthPreset = SOFA_DEFAULT_STATE.widthPreset) {
   seatSeam.position.set(0, 0.445, seatZ + 0.015);
 
   // One adjustable headrest, as shown in the supplied Reims reference.
+  // It is intentionally offset to the RIGHT seat, not centred on the sofa.
+  const headrestX = Math.min(width * 0.18, 0.43);
   const headrest = roundedBox(
     Math.min(0.46, width * 0.21),
     0.18,
@@ -3314,7 +3316,7 @@ function createIjaReimsSofa(widthPreset = SOFA_DEFAULT_STATE.widthPreset) {
     fabricMat,
     'Reims_headrest'
   );
-  headrest.position.set(0.02, 0.965, -0.345);
+  headrest.position.set(headrestX, 0.965, -0.345);
   headrest.rotation.x = THREE.MathUtils.degToRad(-5);
 
   [-0.12, 0.12].forEach((offset, idx) => {
@@ -3326,7 +3328,7 @@ function createIjaReimsSofa(widthPreset = SOFA_DEFAULT_STATE.widthPreset) {
         roughness: 0.35
       })
     );
-    post.position.set(offset, 0.875, -0.345);
+    post.position.set(headrestX + offset, 0.875, -0.345);
     post.castShadow = true;
     post.name = 'Reims_headrest_post_' + idx;
     group.add(post);
@@ -4459,7 +4461,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-ija-reims-sofa-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-ija-reims-headrest-right-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
