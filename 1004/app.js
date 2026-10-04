@@ -2188,9 +2188,9 @@ function createCentroKitchen() {
   });
 
   const dishwasherControlMat = new THREE.MeshStandardMaterial({
-    color: 0x252829,
-    metalness: 0.58,
-    roughness: 0.30
+    color: 0x5b5a57,
+    metalness: 0.32,
+    roughness: 0.46
   });
 
   // The actual machine body is mostly hidden behind the cabinet door.
@@ -2206,50 +2206,64 @@ function createCentroKitchen() {
     dishwasherGroup
   );
 
-  // Full-integrated furniture front follows the selected CENTRO cabinet finish.
+  // Full-integrated furniture front:
+  // the appliance itself is 598 mm wide, but the furniture panel must fill
+  // the complete CENTRO centre module so it visually aligns with adjacent fronts.
+  const dishwasherPanelW = moduleW - 0.018;
+  const dishwasherPanelBottom = 0.082;
+  const dishwasherPanelTop = 0.775;
+  const dishwasherPanelH = dishwasherPanelTop - dishwasherPanelBottom;
+
   addBox(
-    dishwasherW,
-    0.742,
+    dishwasherPanelW,
+    dishwasherPanelH,
     0.022,
     dishwasherX,
-    0.420,
+    dishwasherPanelBottom + dishwasherPanelH / 2,
     dishwasherFrontZ,
     cabinetMat,
     'Bosch_SMV6ZAX00X_integrated_front',
     dishwasherGroup
   );
 
-  // Very thin top control/reveal line; the real controls are hidden when closed.
+  // Full-integrated controls are hidden when closed. Only a very small shadow
+  // reveal remains under the worktop, matching the CENTRO handle line.
+  const dishwasherRevealH = 0.006;
   addBox(
-    dishwasherW - 0.028,
-    0.018,
-    0.014,
+    dishwasherPanelW - 0.016,
+    dishwasherRevealH,
+    0.008,
     dishwasherX,
-    0.805,
-    dishwasherFrontZ + 0.010,
+    0.786,
+    dishwasherFrontZ + 0.008,
     dishwasherControlMat,
     'Bosch_SMV6ZAX00X_control_reveal',
     dishwasherGroup
   );
 
-  // InfoLight-style tiny status indicator at upper-left edge.
-  const infoLightMat = new THREE.MeshStandardMaterial({
-    color: 0xddefff,
-    emissive: 0x80b9ff,
-    emissiveIntensity: 0.50,
-    roughness: 0.35
+  // Fine side shadow gaps make the door read as a cabinet panel instead of a
+  // separate appliance with exposed black borders.
+  const dishwasherGapMat = new THREE.MeshStandardMaterial({
+    color: 0x5f5b56,
+    metalness: 0.08,
+    roughness: 0.62
   });
-  addBox(
-    0.012,
-    0.012,
-    0.008,
-    dishwasherX - dishwasherW / 2 + 0.030,
-    0.805,
-    dishwasherFrontZ + 0.019,
-    infoLightMat,
-    'Bosch_SMV6ZAX00X_info_light',
-    dishwasherGroup
-  );
+
+  const sideGapW = 0.0035;
+  [dishwasherX - dishwasherPanelW/2 - sideGapW/2,
+   dishwasherX + dishwasherPanelW/2 + sideGapW/2].forEach(gapX => {
+    addBox(
+      sideGapW,
+      dishwasherPanelH,
+      0.006,
+      gapX,
+      dishwasherPanelBottom + dishwasherPanelH / 2,
+      dishwasherFrontZ + 0.007,
+      dishwasherGapMat,
+      'Bosch_SMV6ZAX00X_side_gap',
+      dishwasherGroup
+    );
+  });
 
   // Cleanup CENTRO realistic sink layout.
   // SH-class Naga-rail stainless sink proportions:
@@ -3973,7 +3987,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-sink-depth-faucet-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-integrated-door-v4'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
