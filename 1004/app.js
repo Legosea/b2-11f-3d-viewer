@@ -79,10 +79,10 @@ const COMPONENT_LIBRARY = Object.freeze({
       id: 'w3-window-daybed',
       brand: 'Built-in',
       model: 'W3 Window Daybed',
-      label: 'W3 窗邊臥榻',
-      widthMm: 2660,
+      label: 'W3 窗邊木作臥榻板',
+      widthMm: 2702,
       depthMm: 620,
-      heightMm: 440
+      heightMm: 45
     }
   ]
 });
@@ -1801,11 +1801,16 @@ function editableIntersectsWall(object) {
 
   // Clearance is horizontal only. Keeping Y exact prevents an object from
   // colliding with unrelated wall geometry above/below it.
+  // Built-in millwork may intentionally sit visually flush to walls.
+  const wallClearance = Number.isFinite(object.userData?.wallClearance)
+    ? object.userData.wallClearance
+    : WALL_COLLISION_CLEARANCE;
+
   const collisionTestBox = objectBox.clone();
-  collisionTestBox.min.x -= WALL_COLLISION_CLEARANCE;
-  collisionTestBox.max.x += WALL_COLLISION_CLEARANCE;
-  collisionTestBox.min.z -= WALL_COLLISION_CLEARANCE;
-  collisionTestBox.max.z += WALL_COLLISION_CLEARANCE;
+  collisionTestBox.min.x -= wallClearance;
+  collisionTestBox.max.x += wallClearance;
+  collisionTestBox.min.z -= wallClearance;
+  collisionTestBox.max.z += wallClearance;
 
   for (const collider of wallColliders) {
     // Cheap broad-phase first.
@@ -3217,237 +3222,107 @@ function setKitchenCountertopFromLibrary(countertopId) {
 }
 
 function createW3WindowDaybed() {
-  // Built-in window daybed aligned to the corrected W3 opening:
-  // W3 = 268 cm wide, sill = 50 cm above finished floor.
-  // Daybed is kept just inside that width and below the sill.
-  const width = 2.66;
+  // W3 niche measured directly from the converted apartment geometry:
+  // left interior wall face  x = 3.202 m
+  // right interior wall face x = 5.904 m
+  // => clear wall-to-wall span = 2.702 m.
+  //
+  // User requirement: ONLY a timber slab / daybed top. No cabinet base,
+  // no cushion and no pillows.
+  const width = 2.702;
   const depth = 0.62;
-  const totalHeight = 0.44;
+  const slabThickness = 0.045;
+  const topHeight = 0.44;
 
   const group = new THREE.Group();
-  group.name = 'W3_Window_Daybed';
+  group.name = 'W3_Window_Timber_Daybed_Slab';
   group.userData.editable = true;
   group.userData.componentId = 'w3-window-daybed';
-  group.userData.label = 'W3 窗邊臥榻';
+  group.userData.label = 'W3 窗邊木作臥榻板';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
+
+  // Slightly shrink the collision envelope by 2 mm so the built-in can sit
+  // exactly between the two side walls without fighting the wall-collision
+  // safety gap used by freestanding furniture.
+  group.userData.wallClearance = -0.002;
+
   group.userData.productSize = {
     width,
     depth,
-    height: totalHeight
+    thickness: slabThickness,
+    topHeight
   };
 
-  const whiteCabinetMat = new THREE.MeshStandardMaterial({
-    color: 0xf1f0eb,
-    roughness: 0.78,
-    metalness: 0
-  });
-
-  const panelShadowMat = new THREE.MeshStandardMaterial({
-    color: 0xb8b3aa,
-    roughness: 0.82,
-    metalness: 0
-  });
+  const oakTexture = getWoodTexture('light-oak', 'roomDoor');
 
   const oakMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: 0.72,
+    roughness: 0.70,
     metalness: 0,
-    map: getWoodTexture('light-oak', 'roomDoor')
+    map: oakTexture
   });
 
-  const cushionBump = getSofaFabricBumpTexture();
-  const cushionMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe3ded4,
-    roughness: 0.91,
-    metalness: 0,
-    sheen: 0.12,
-    sheenColor: new THREE.Color(0xffffff),
-    sheenRoughness: 0.94,
-    bumpMap: cushionBump,
-    bumpScale: 0.0045
-  });
-
-  const pillowMatA = new THREE.MeshPhysicalMaterial({
-    color: 0xd5ccbd,
-    roughness: 0.93,
-    metalness: 0,
-    sheen: 0.10,
-    sheenColor: new THREE.Color(0xffffff),
-    sheenRoughness: 0.96,
-    bumpMap: cushionBump,
-    bumpScale: 0.004
-  });
-
-  const pillowMatB = new THREE.MeshPhysicalMaterial({
-    color: 0xc6b7a5,
-    roughness: 0.94,
-    metalness: 0,
-    sheen: 0.08,
-    sheenColor: new THREE.Color(0xffffff),
-    sheenRoughness: 0.97,
-    bumpMap: cushionBump,
-    bumpScale: 0.004
-  });
-
-  function roundedBox(w, h, d, radius, material, name='') {
-    const mesh = new THREE.Mesh(
-      new RoundedBoxGeometry(w, h, d, 4, radius),
-      material
-    );
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.name = name;
-    group.add(mesh);
-    return mesh;
-  }
-
-  // White built-in storage base, slightly recessed at the toe kick.
-  const baseH = 0.335;
-  const base = roundedBox(
-    width,
-    baseH,
-    depth - 0.035,
-    0.018,
-    whiteCabinetMat,
-    'Daybed_storage_base'
+  // Main wood slab.
+  const slab = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      width,
+      slabThickness,
+      depth,
+      5,
+      0.010
+    ),
+    oakMat
   );
-  base.position.set(0, baseH / 2, 0.012);
-
-  const toeKick = roundedBox(
-    width - 0.08,
-    0.070,
-    0.050,
-    0.010,
-    panelShadowMat,
-    'Daybed_toe_kick'
-  );
-  toeKick.position.set(0, 0.035, -depth / 2 + 0.012);
-
-  // Three subtle shaker-like storage fronts on the room-facing side (-Z).
-  const doorGap = 0.012;
-  const frontW = (width - doorGap * 4) / 3;
-  for (let i = 0; i < 3; i++) {
-    const x =
-      -width / 2 +
-      doorGap +
-      frontW / 2 +
-      i * (frontW + doorGap);
-
-    const front = roundedBox(
-      frontW,
-      0.235,
-      0.020,
-      0.008,
-      whiteCabinetMat,
-      'Daybed_storage_front_' + i
-    );
-    front.position.set(
-      x,
-      0.205,
-      -depth / 2 - 0.004
-    );
-
-    // Fine inset frame detail.
-    const railTop = roundedBox(
-      frontW - 0.065,
-      0.010,
-      0.008,
-      0.003,
-      panelShadowMat,
-      'Daybed_front_top_detail_' + i
-    );
-    railTop.position.set(
-      x,
-      0.285,
-      -depth / 2 - 0.016
-    );
-
-    const handle = roundedBox(
-      0.075,
-      0.010,
-      0.014,
-      0.004,
-      panelShadowMat,
-      'Daybed_handle_' + i
-    );
-    handle.position.set(
-      x,
-      0.252,
-      -depth / 2 - 0.024
-    );
-  }
-
-  // Warm oak slab, matching the reference built-in bench.
-  const oakTop = roundedBox(
-    width,
-    0.045,
-    depth,
-    0.014,
-    oakMat,
-    'Daybed_oak_top'
-  );
-  oakTop.position.set(0, baseH + 0.0225, 0);
-
-  // Thin oatmeal seat pad; leaves a small wood border visible.
-  const cushion = roundedBox(
-    width - 0.12,
-    0.055,
-    depth - 0.12,
-    0.028,
-    cushionMat,
-    'Daybed_seat_cushion'
-  );
-  cushion.position.set(
+  slab.position.set(
     0,
-    baseH + 0.045 + 0.0275,
-    -0.008
+    topHeight - slabThickness / 2,
+    0
   );
+  slab.castShadow = true;
+  slab.receiveShadow = true;
+  slab.name = 'W3_daybed_timber_slab';
+  group.add(slab);
 
-  // Two loose cushions gathered into the RIGHT corner, inspired by the photo.
-  const pillow1 = roundedBox(
-    0.43,
-    0.35,
-    0.13,
-    0.060,
-    pillowMatA,
-    'Daybed_pillow_large'
-  );
-  pillow1.position.set(
-    width / 2 - 0.36,
-    0.535,
-    depth / 2 - 0.105
-  );
-  pillow1.rotation.x = THREE.MathUtils.degToRad(-10);
-  pillow1.rotation.z = THREE.MathUtils.degToRad(5);
+  // A very thin darker front edge gives the wood board believable thickness
+  // without adding cabinets or visible supports.
+  const edgeMat = new THREE.MeshStandardMaterial({
+    color: 0xb99368,
+    roughness: 0.74,
+    metalness: 0
+  });
 
-  const pillow2 = roundedBox(
-    0.33,
-    0.30,
-    0.12,
-    0.055,
-    pillowMatB,
-    'Daybed_pillow_small'
+  const frontEdge = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      width - 0.004,
+      slabThickness - 0.008,
+      0.010
+    ),
+    edgeMat
   );
-  pillow2.position.set(
-    width / 2 - 0.63,
-    0.505,
-    depth / 2 - 0.095
+  frontEdge.position.set(
+    0,
+    topHeight - slabThickness / 2,
+    -depth / 2 - 0.003
   );
-  pillow2.rotation.x = THREE.MathUtils.degToRad(-9);
-  pillow2.rotation.z = THREE.MathUtils.degToRad(-6);
+  frontEdge.castShadow = true;
+  frontEdge.name = 'W3_daybed_front_edge';
+  group.add(frontEdge);
 
-  // Invisible proxy makes touch selection easy while collision bounds continue
-  // to use only visible geometry.
+  // Hidden selection proxy only; not included in collision bounds.
   const pickProxy = new THREE.Mesh(
-    new THREE.BoxGeometry(width * 1.01, 0.67, depth * 1.03),
+    new THREE.BoxGeometry(
+      width,
+      0.18,
+      depth
+    ),
     new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
       depthWrite: false
     })
   );
-  pickProxy.position.y = 0.335;
+  pickProxy.position.y = topHeight - 0.07;
   pickProxy.userData.pickProxy = true;
   group.add(pickProxy);
 
@@ -4828,7 +4703,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-window-daybed-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-timber-slab-flush-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
