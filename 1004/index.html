@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#f6f3ed" />
   <title>1004 Empty Interior · Three.js</title>
-  <link rel="stylesheet" href="./styles.css?v=20261004-centro-integrated-door-v4" />
+  <link rel="stylesheet" href="./styles.css?v=20261004-ija-reims-sofa-v1" />
   <script type="importmap">
     {
       "imports": {
@@ -22,7 +22,7 @@
     <header class="topbar">
       <div>
         <h1>1004 · Empty Interior 3D</h1>
-        <p>室內配置 · CENTRO 擬真下沉水槽 + Bosch 洗碗機</p>
+        <p>室內配置 · IJA Reims 三人沙發 + 元件庫</p>
       </div>
       <div class="actions">
         <button id="fitBtn" class="button" disabled>置中</button>
@@ -191,10 +191,30 @@
         </section>
 
         <section class="library-section hidden" data-library-section="furniture">
-          <div class="library-empty">
-            <strong>家具元件庫</strong>
-            <p>後續加入沙發、床、餐桌、櫃體時，會共用目前的移動、旋轉磁吸、刪除與記憶機制。</p>
-          </div>
+          <article class="catalog-card">
+            <div class="catalog-product">
+              <div class="catalog-icon sofa-icon">
+                <span></span>
+              </div>
+              <div>
+                <strong>IJA 愛加 · 蘭斯 Reims</strong>
+                <small>三人沙發 · 深 97 cm · 高 104 cm · 寬 210–252 cm</small>
+              </div>
+            </div>
+
+            <div class="library-label">規劃寬度</div>
+            <div class="swatch-row">
+              <button class="swatch-option selected" data-sofa-width="210">210 cm</button>
+              <button class="swatch-option" data-sofa-width="231">231 cm</button>
+              <button class="swatch-option" data-sofa-width="252">252 cm</button>
+            </div>
+
+            <div class="catalog-note">
+              參考款式：淺灰布面、雙座墊、雙背墊、可調頭枕、實木底座與木腳。
+            </div>
+
+            <button id="addSofaBtn" class="button primary catalog-action">放置 / 選取</button>
+          </article>
         </section>
 
         <section class="library-section hidden" data-library-section="materials">
@@ -260,6 +280,6 @@
     </footer>
   </div>
 
-  <script type="module" src="./app.js?v=20261004-centro-integrated-door-v4"></script>
+  <script type="module" src="./app.js?v=20261004-ija-reims-sofa-v1"></script>
 </body>
 </html>
