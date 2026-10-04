@@ -549,16 +549,22 @@ function replaceLivingRoomW3(root) {
   const glassDepth = 0.006;
 
   const frameMat = new THREE.MeshStandardMaterial({
-    color: 0x343938,
-    metalness: 0.62,
-    roughness: 0.30
+    color: 0x1f2322,
+    metalness: 0.68,
+    roughness: 0.28
+  });
+
+  const sashMat = new THREE.MeshStandardMaterial({
+    color: 0x121515,
+    metalness: 0.72,
+    roughness: 0.24
   });
 
   const glassMat = new THREE.MeshStandardMaterial({
-    color: 0xb9c8ca,
+    color: 0xaebfc2,
     transparent: true,
-    opacity: 0.22,
-    roughness: 0.10,
+    opacity: 0.34,
+    roughness: 0.08,
     metalness: 0,
     depthWrite: false,
     side: THREE.DoubleSide
@@ -626,22 +632,39 @@ function replaceLivingRoomW3(root) {
   colBounds.forEach(([x0, x1]) => addGlass(x0, x1, lowerY0, lowerY1));
   addGlass(colBounds[1][0], colBounds[1][1], upperY0, upperY1);
 
-  // Upper left and right are operable sashes. Add an inset sash perimeter,
-  // but do not draw the diagonal opening symbols from the shop drawing.
+  // Upper left and right are operable black-aluminum sashes.
+  // The previous version left too much transparent reveal around the sash,
+  // which made the window look like an empty opening. Here the sash nearly
+  // fills its framed cell and the glass sits clearly inside the black profile.
   function addOperableSash(x0, x1) {
-    const inset = 0.055;
-    const sashBar = 0.030;
+    const inset = 0.018;
+    const sashBar = 0.052;
+    const glazingBead = 0.016;
+    const sashDepth = 0.118;
+
     const sx0 = x0 + inset;
     const sx1 = x1 - inset;
     const sy0 = upperY0 + inset;
     const sy1 = upperY1 - inset;
 
-    addGlass(sx0 + sashBar, sx1 - sashBar, sy0 + sashBar, sy1 - sashBar);
+    // Main sash profile: substantial black aluminum on all four sides.
+    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy0 + sashBar / 2, sashDepth, sashMat);
+    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy1 - sashBar / 2, sashDepth, sashMat);
+    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx0 + sashBar / 2, (sy0 + sy1) / 2, sashDepth, sashMat);
+    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx1 - sashBar / 2, (sy0 + sy1) / 2, sashDepth, sashMat);
 
-    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy0 + sashBar / 2, 0.082);
-    addFrameBar(sx1 - sx0, sashBar, (sx0 + sx1) / 2, sy1 - sashBar / 2, 0.082);
-    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx0 + sashBar / 2, (sy0 + sy1) / 2, 0.082);
-    addFrameBar(sashBar, sy1 - sy0 - sashBar * 2, sx1 - sashBar / 2, (sy0 + sy1) / 2, 0.082);
+    // Glazing sits inside the sash, not in the surrounding reveal.
+    const gx0 = sx0 + sashBar;
+    const gx1 = sx1 - sashBar;
+    const gy0 = sy0 + sashBar;
+    const gy1 = sy1 - sashBar;
+    addGlass(gx0 + glazingBead, gx1 - glazingBead, gy0 + glazingBead, gy1 - glazingBead);
+
+    // Thin inner glazing bead gives the black frame a layered aluminum-window profile.
+    addFrameBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy0 + glazingBead / 2, 0.090, sashMat);
+    addFrameBar(gx1 - gx0, glazingBead, (gx0 + gx1) / 2, gy1 - glazingBead / 2, 0.090, sashMat);
+    addFrameBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx0 + glazingBead / 2, (gy0 + gy1) / 2, 0.090, sashMat);
+    addFrameBar(glazingBead, gy1 - gy0 - glazingBead * 2, gx1 - glazingBead / 2, (gy0 + gy1) / 2, 0.090, sashMat);
   }
 
   addOperableSash(colBounds[0][0], colBounds[0][1]);
@@ -974,7 +997,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-268x190-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-w3-black-sash-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -1028,7 +1051,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · W3 已校正 268×190 cm · 窗台 50 cm · 79/110/79');
+    setStatus('1004 · W3 268×190 cm · 上排左右黑框窗扇已修正');
     fitCamera();
   } catch (error) {
     console.error(error);
