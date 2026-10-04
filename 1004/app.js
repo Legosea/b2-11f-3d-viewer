@@ -2024,7 +2024,7 @@ function createCentroKitchen() {
   group.name = 'Cleanup_CENTRO_207';
   group.userData.editable = true;
   group.userData.componentId = 'cleanup-centro-207';
-  group.userData.label = 'Cleanup CENTRO 一字型 207 cm';
+  group.userData.label = 'Cleanup CENTRO 一字型 207 cm · 流レール不鏽鋼水槽';
   group.userData.variant = KITCHEN_DEFAULT_STATE.variant;
   group.userData.countertop = KITCHEN_DEFAULT_STATE.countertop;
   group.userData.floorY = 0;
@@ -2205,17 +2205,71 @@ function createCentroKitchen() {
     dishwasherGroup
   );
 
-  // Countertop: material can be selected independently from cabinet fronts.
+  // Cleanup CENTRO realistic sink layout.
+  // SH-class Naga-rail stainless sink proportions:
+  // approx. W600 x D520 x H185 mm.
+  const sinkW = 0.600;
+  const sinkD = 0.520;
+  const sinkH = 0.185;
+  const sinkX = moduleW * 0.5;
+  const sinkZ = depth * 0.50;
+  const sinkLeft = sinkX - sinkW / 2;
+  const sinkRight = sinkX + sinkW / 2;
+  const sinkBack = sinkZ - sinkD / 2;
+  const sinkFront = sinkZ + sinkD / 2;
+  const counterY = baseHeight + counterThickness / 2;
+  const counterOverhang = 0.0175;
+
+  // Countertop is built around the opening rather than as one solid slab.
+  if (sinkLeft > 0.004) {
+    addBox(
+      sinkLeft + counterOverhang,
+      counterThickness,
+      depth + 0.035,
+      (sinkLeft - counterOverhang) / 2,
+      counterY,
+      depth / 2 + 0.012,
+      counterMat,
+      'CENTRO_countertop_left'
+    );
+  }
+
   addBox(
-    width + 0.035,
+    width - sinkRight + counterOverhang,
     counterThickness,
     depth + 0.035,
-    width/2,
-    baseHeight + counterThickness/2,
-    depth/2 + 0.012,
+    sinkRight + (width - sinkRight + counterOverhang) / 2,
+    counterY,
+    depth / 2 + 0.012,
     counterMat,
-    'CENTRO_countertop'
+    'CENTRO_countertop_right'
   );
+
+  if (sinkBack > 0.004) {
+    addBox(
+      sinkW,
+      counterThickness,
+      sinkBack + counterOverhang,
+      sinkX,
+      counterY,
+      (sinkBack - counterOverhang) / 2,
+      counterMat,
+      'CENTRO_countertop_sink_back'
+    );
+  }
+
+  if (depth - sinkFront > 0.004) {
+    addBox(
+      sinkW,
+      counterThickness,
+      depth - sinkFront + counterOverhang,
+      sinkX,
+      counterY,
+      sinkFront + (depth - sinkFront + counterOverhang) / 2,
+      counterMat,
+      'CENTRO_countertop_sink_front'
+    );
+  }
 
   // Backsplash.
   addBox(
@@ -2256,57 +2310,318 @@ function createCentroKitchen() {
     assembly.add(ring);
   });
 
-  // Sink on the LEFT module, with the centre module kept as prep space.
-  const sinkX = moduleW * 0.5;
-  addBox(
-    moduleW * 0.68,
-    0.025,
-    0.42,
-    sinkX,
-    baseHeight + counterThickness + 0.008,
-    depth * 0.52,
-    stainlessMat,
-    'CENTRO_sink'
+  // -----------------------------------------------------------------------
+  // Cleanup-style photoreal stainless Naga-rail sink.
+  // -----------------------------------------------------------------------
+  const sinkSteel = new THREE.MeshPhysicalMaterial({
+    color: 0xbfc4c6,
+    metalness: 0.88,
+    roughness: 0.31,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.42
+  });
+
+  const sinkDarkSteel = new THREE.MeshStandardMaterial({
+    color: 0x747b7d,
+    metalness: 0.78,
+    roughness: 0.35
+  });
+
+  // Fine horizontal brushed-steel bump texture.
+  const brushedCanvas = document.createElement('canvas');
+  brushedCanvas.width = 256;
+  brushedCanvas.height = 256;
+  const brushedCtx = brushedCanvas.getContext('2d');
+  brushedCtx.fillStyle = '#808080';
+  brushedCtx.fillRect(0, 0, 256, 256);
+
+  const brushedRandom = seededRandom(hashString('cleanup-centro-sh-sink'));
+  for (let i = 0; i < 1800; i++) {
+    const shade = 102 + Math.floor(brushedRandom() * 60);
+    brushedCtx.strokeStyle = `rgba(${shade},${shade},${shade},0.13)`;
+    brushedCtx.lineWidth = 0.45 + brushedRandom() * 0.60;
+    const y = brushedRandom() * 256;
+    const x = brushedRandom() * 256;
+    const length = 10 + brushedRandom() * 42;
+    brushedCtx.beginPath();
+    brushedCtx.moveTo(x, y);
+    brushedCtx.lineTo(
+      Math.min(256, x + length),
+      y + (brushedRandom() - 0.5) * 0.8
+    );
+    brushedCtx.stroke();
+  }
+
+  const brushedTexture = new THREE.CanvasTexture(brushedCanvas);
+  brushedTexture.wrapS = THREE.RepeatWrapping;
+  brushedTexture.wrapT = THREE.RepeatWrapping;
+  brushedTexture.repeat.set(2.0, 2.0);
+  brushedTexture.anisotropy = Math.min(
+    8,
+    renderer.capabilities.getMaxAnisotropy()
+  );
+  brushedTexture.needsUpdate = true;
+  sinkSteel.bumpMap = brushedTexture;
+  sinkSteel.bumpScale = 0.0022;
+
+  function roundedRectPath(path, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    path.moveTo(x + radius, y);
+    path.lineTo(x + w - radius, y);
+    path.quadraticCurveTo(x + w, y, x + w, y + radius);
+    path.lineTo(x + w, y + h - radius);
+    path.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    path.lineTo(x + radius, y + h);
+    path.quadraticCurveTo(x, y + h, x, y + h - radius);
+    path.lineTo(x, y + radius);
+    path.quadraticCurveTo(x, y, x + radius, y);
+  }
+
+  // Rounded stainless rim.
+  const outerW = sinkW + 0.018;
+  const outerD = sinkD + 0.018;
+  const innerW = sinkW - 0.026;
+  const innerD = sinkD - 0.026;
+
+  const rimShape = new THREE.Shape();
+  roundedRectPath(
+    rimShape,
+    -outerW / 2,
+    -outerD / 2,
+    outerW,
+    outerD,
+    0.040
   );
 
-  addBox(
-    moduleW * 0.55,
-    0.035,
-    0.31,
+  const rimHole = new THREE.Path();
+  roundedRectPath(
+    rimHole,
+    -innerW / 2,
+    -innerD / 2,
+    innerW,
+    innerD,
+    0.032
+  );
+  rimShape.holes.push(rimHole);
+
+  const rimGeometry = new THREE.ExtrudeGeometry(rimShape, {
+    depth: 0.006,
+    bevelEnabled: true,
+    bevelSize: 0.0035,
+    bevelThickness: 0.0025,
+    bevelSegments: 3,
+    curveSegments: 16
+  });
+  rimGeometry.rotateX(Math.PI / 2);
+
+  const sinkRim = new THREE.Mesh(rimGeometry, sinkSteel);
+  sinkRim.position.set(
     sinkX,
-    baseHeight + counterThickness + 0.018,
-    depth * 0.52,
+    baseHeight + counterThickness + 0.004,
+    sinkZ
+  );
+  sinkRim.castShadow = true;
+  sinkRim.receiveShadow = true;
+  sinkRim.name = 'CENTRO_sink_rim';
+  assembly.add(sinkRim);
+
+  // Recessed basin floor.
+  const basinBottom = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      innerW - 0.032,
+      0.010,
+      innerD - 0.032
+    ),
+    sinkSteel
+  );
+  basinBottom.position.set(
+    sinkX,
+    baseHeight + counterThickness - sinkH + 0.012,
+    sinkZ
+  );
+  basinBottom.castShadow = true;
+  basinBottom.receiveShadow = true;
+  basinBottom.name = 'CENTRO_sink_basin_bottom';
+  assembly.add(basinBottom);
+
+  // Four basin walls, slightly leaning inward like pressed stainless.
+  const basinTopY = baseHeight + counterThickness - 0.010;
+  const basinBottomY = baseHeight + counterThickness - sinkH + 0.020;
+  const basinWallH = basinTopY - basinBottomY;
+  const wallT = 0.012;
+
+  const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(innerW - 0.020, basinWallH, wallT),
+    sinkSteel
+  );
+  backWall.position.set(
+    sinkX,
+    (basinTopY + basinBottomY) / 2,
+    sinkZ - innerD / 2 + wallT / 2
+  );
+  backWall.rotation.x = THREE.MathUtils.degToRad(-3.0);
+  assembly.add(backWall);
+
+  const frontWall = backWall.clone();
+  frontWall.position.z = sinkZ + innerD / 2 - wallT / 2;
+  frontWall.rotation.x = THREE.MathUtils.degToRad(3.0);
+  assembly.add(frontWall);
+
+  const leftWall = new THREE.Mesh(
+    new THREE.BoxGeometry(wallT, basinWallH, innerD - 0.020),
+    sinkSteel
+  );
+  leftWall.position.set(
+    sinkX - innerW / 2 + wallT / 2,
+    (basinTopY + basinBottomY) / 2,
+    sinkZ
+  );
+  leftWall.rotation.z = THREE.MathUtils.degToRad(3.0);
+  assembly.add(leftWall);
+
+  const rightWall = leftWall.clone();
+  rightWall.position.x = sinkX + innerW / 2 - wallT / 2;
+  rightWall.rotation.z = THREE.MathUtils.degToRad(-3.0);
+  assembly.add(rightWall);
+
+  [backWall, frontWall, leftWall, rightWall].forEach(wall => {
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    wall.name = 'CENTRO_sink_basin_wall';
+  });
+
+  // Cleanup Naga-rail-style front drainage channel.
+  const flowRail = new THREE.Mesh(
+    new THREE.BoxGeometry(innerW - 0.060, 0.010, 0.034),
+    sinkDarkSteel
+  );
+  flowRail.position.set(
+    sinkX,
+    baseHeight + counterThickness - sinkH + 0.023,
+    sinkZ + innerD / 2 - 0.050
+  );
+  flowRail.rotation.x = THREE.MathUtils.degToRad(-4);
+  flowRail.castShadow = true;
+  flowRail.receiveShadow = true;
+  flowRail.name = 'CENTRO_sink_flow_rail';
+  assembly.add(flowRail);
+
+  // Drain / strainer at end of rail.
+  const drainX = sinkX + innerW * 0.31;
+  const drainZ = sinkZ + innerD / 2 - 0.062;
+
+  const drainOuter = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.052, 0.052, 0.010, 48),
+    sinkDarkSteel
+  );
+  drainOuter.position.set(
+    drainX,
+    baseHeight + counterThickness - sinkH + 0.030,
+    drainZ
+  );
+  drainOuter.name = 'CENTRO_sink_drain';
+  assembly.add(drainOuter);
+
+  const drainInner = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.038, 0.038, 0.012, 48),
     new THREE.MeshStandardMaterial({
-      color: 0x777e80,
+      color: 0x4d5456,
       metalness: 0.72,
-      roughness: 0.34
-    }),
-    'CENTRO_sink_bowl'
+      roughness: 0.42
+    })
   );
+  drainInner.position.set(
+    drainX,
+    baseHeight + counterThickness - sinkH + 0.036,
+    drainZ
+  );
+  assembly.add(drainInner);
 
-  // Faucet.
+  // Modern pull-out gooseneck faucet on the rear-right deck.
+  const faucetMat = new THREE.MeshPhysicalMaterial({
+    color: 0xb5bbbd,
+    metalness: 0.90,
+    roughness: 0.24,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.28
+  });
+
+  const faucetX = sinkX + sinkW * 0.29;
+  const faucetZ = sinkBack + 0.010;
+  const faucetBaseY = baseHeight + counterThickness;
+
+  const faucetBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.030, 0.034, 0.070, 28),
+    faucetMat
+  );
+  faucetBase.position.set(
+    faucetX,
+    faucetBaseY + 0.035,
+    faucetZ
+  );
+  assembly.add(faucetBase);
+
   const faucetStem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.018, 0.018, 0.30, 20),
-    stainlessMat
+    new THREE.CylinderGeometry(0.018, 0.020, 0.245, 28),
+    faucetMat
   );
   faucetStem.position.set(
-    sinkX + moduleW * 0.22,
-    baseHeight + 0.18,
-    depth * 0.30
+    faucetX,
+    faucetBaseY + 0.175,
+    faucetZ
   );
   assembly.add(faucetStem);
 
-  const faucetSpout = new THREE.Mesh(
-    new THREE.TorusGeometry(0.10, 0.014, 10, 32, Math.PI),
-    stainlessMat
+  const faucetArch = new THREE.Mesh(
+    new THREE.TorusGeometry(0.105, 0.017, 16, 48, Math.PI),
+    faucetMat
   );
-  faucetSpout.rotation.z = Math.PI / 2;
-  faucetSpout.position.set(
-    sinkX + moduleW * 0.22,
-    baseHeight + 0.32,
-    depth * 0.36
+  faucetArch.rotation.set(
+    Math.PI / 2,
+    0,
+    Math.PI / 2
   );
-  assembly.add(faucetSpout);
+  faucetArch.position.set(
+    faucetX - 0.103,
+    faucetBaseY + 0.292,
+    faucetZ
+  );
+  assembly.add(faucetArch);
+
+  const faucetNozzle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.017, 0.019, 0.105, 24),
+    faucetMat
+  );
+  faucetNozzle.rotation.z = Math.PI / 2;
+  faucetNozzle.position.set(
+    faucetX - 0.207,
+    faucetBaseY + 0.292,
+    faucetZ
+  );
+  assembly.add(faucetNozzle);
+
+  const faucetHead = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.024, 0.024, 0.065, 24),
+    faucetMat
+  );
+  faucetHead.position.set(
+    faucetX - 0.260,
+    faucetBaseY + 0.260,
+    faucetZ
+  );
+  assembly.add(faucetHead);
+
+  const faucetLever = new THREE.Mesh(
+    new THREE.BoxGeometry(0.012, 0.080, 0.012),
+    faucetMat
+  );
+  faucetLever.position.set(
+    faucetX + 0.038,
+    faucetBaseY + 0.155,
+    faucetZ
+  );
+  faucetLever.rotation.z = THREE.MathUtils.degToRad(-20);
+  assembly.add(faucetLever);
 
   // Upper cabinets and range hood.
   const upperY = 1.88;
@@ -3576,7 +3891,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-bosch-smv6zax00x-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-realistic-sink-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
