@@ -26,7 +26,7 @@ const modelInfo = document.getElementById('modelInfo');
 const fitBtn = document.getElementById('fitBtn');
 const exportBtn = document.getElementById('exportBtn');
 
-let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight;
+let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot;
 let nordicWoodTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
@@ -101,6 +101,10 @@ function initThree() {
 
   modelRoot = new THREE.Group();
   scene.add(modelRoot);
+
+  interiorLightRoot = new THREE.Group();
+  interiorLightRoot.name = 'Interior_Lighting';
+  scene.add(interiorLightRoot);
 
   nordicWoodTexture = createWoodTexture();
 
@@ -482,6 +486,87 @@ function applyPhotorealStyle(root) {
   });
 }
 
+function kelvinToColor(kelvin) {
+  // Compact approximation suitable for architectural lighting.
+  const temp = kelvin / 100;
+  let r, g, b;
+
+  if (temp <= 66) {
+    r = 255;
+    g = 99.4708025861 * Math.log(temp) - 161.1195681661;
+    b = temp <= 19 ? 0 : 138.5177312231 * Math.log(temp - 10) - 305.0447927307;
+  } else {
+    r = 329.698727446 * Math.pow(temp - 60, -0.1332047592);
+    g = 288.1221695283 * Math.pow(temp - 60, -0.0755148492);
+    b = 255;
+  }
+
+  const clamp = value => Math.min(255, Math.max(0, value)) / 255;
+  return new THREE.Color(clamp(r), clamp(g), clamp(b));
+}
+
+function addCeilingSpot({
+  x,
+  z,
+  y = 2.55,
+  targetY = 0.15,
+  kelvin = 3000,
+  intensity = 55,
+  distance = 4.2,
+  angleDeg = 48,
+  penumbra = 0.72
+}) {
+  const light = new THREE.SpotLight(
+    kelvinToColor(kelvin),
+    intensity,
+    distance,
+    THREE.MathUtils.degToRad(angleDeg),
+    penumbra,
+    2
+  );
+
+  light.position.set(x, y, z);
+  light.castShadow = false;
+
+  const target = new THREE.Object3D();
+  target.position.set(x, targetY, z);
+  interiorLightRoot.add(target);
+
+  light.target = target;
+  interiorLightRoot.add(light);
+
+  return light;
+}
+
+function setupInteriorLighting(box) {
+  while (interiorLightRoot.children.length) {
+    interiorLightRoot.remove(interiorLightRoot.children[0]);
+  }
+
+  // The coordinates below follow the converted 1004 apartment layout.
+  // Warm public-area lighting.
+  addCeilingSpot({ x: 4.55, z: -4.15, kelvin: 3000, intensity: 62, distance: 4.8, angleDeg: 52 });
+  addCeilingSpot({ x: 5.45, z: -3.45, kelvin: 3000, intensity: 48, distance: 4.2, angleDeg: 46 });
+
+  // Dining / kitchen zone: slightly more neutral for food prep and clarity.
+  addCeilingSpot({ x: 6.65, z: -4.55, kelvin: 3200, intensity: 58, distance: 4.2, angleDeg: 44 });
+  addCeilingSpot({ x: 7.15, z: -2.95, kelvin: 3500, intensity: 46, distance: 3.8, angleDeg: 42 });
+
+  // Bedrooms: warmer, softer light.
+  addCeilingSpot({ x: 1.65, z: -3.15, kelvin: 2800, intensity: 42, distance: 4.0, angleDeg: 50 });
+  addCeilingSpot({ x: 9.35, z: -4.45, kelvin: 2800, intensity: 42, distance: 4.0, angleDeg: 50 });
+
+  // Corridor / entrance.
+  addCeilingSpot({ x: 5.95, z: -1.85, kelvin: 3000, intensity: 34, distance: 3.2, angleDeg: 40 });
+
+  // Bathroom / utility: neutral warm-white for visibility.
+  addCeilingSpot({ x: 9.15, z: -1.55, kelvin: 3500, intensity: 44, distance: 3.2, angleDeg: 42 });
+
+  // Very low-level warm fill to prevent black corners without flattening the sun shadows.
+  const interiorBounce = new THREE.HemisphereLight(0xffead2, 0x6f675f, 0.16);
+  interiorLightRoot.add(interiorBounce);
+}
+
 function updatePresentationGround(box) {
   while (stagingRoot.children.length) {
     const child = stagingRoot.children.pop();
@@ -579,6 +664,7 @@ function fitCamera() {
   controls.update();
 
   updatePresentationGround(box);
+  setupInteriorLighting(box);
 }
 
 async function downloadGlb() {
@@ -626,7 +712,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-empty-photoreal-1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-empty-photoreal-lights-1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -678,7 +764,7 @@ async function tryAutoLoadRepoModel() {
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
-    setStatus('1004 · 空屋擬真 · 坐東南向西北 · ' + SHOWCASE_TIME_LABEL + ' 日照');
+    setStatus('1004 · 空屋擬真 · 西北向午後日照 + 室內暖光');
     fitCamera();
   } catch (error) {
     console.error(error);
