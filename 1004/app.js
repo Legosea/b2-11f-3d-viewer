@@ -125,7 +125,12 @@ const FRIDGE_STORAGE_KEY = 'b2-11f-1004.panasonic-nr-f552yt.v1';
 
 const KITCHEN_DEFAULT_STATE = Object.freeze({
   exists: true,
-  variant: 'ar8-raster-silver'
+  x: 5.755,
+  y: 0,
+  z: -5.845,
+  rotationY: 0,
+  variant: 'ar8-raster-silver',
+  countertop: 'e-coat-stainless'
 });
 
 const FRIDGE_DEFAULT_STATE = Object.freeze({
@@ -161,22 +166,56 @@ const CENTRO_VARIANTS = Object.freeze({
   }
 });
 
+const CENTRO_COUNTERTOP_VARIANTS = Object.freeze({
+  'e-coat-stainless': {
+    label: 'e-coat 不鏽鋼',
+    color: 0xb6bbbd,
+    metalness: 0.72,
+    roughness: 0.30,
+    stone: null
+  },
+  'white-stone': {
+    label: '白色石紋',
+    color: 0xe7e4de,
+    metalness: 0.02,
+    roughness: 0.38,
+    stone: ['#ebe8e2','#d8d3cb','#c5bfb6']
+  },
+  'greige-stone': {
+    label: '暖灰石紋',
+    color: 0xb8afa4,
+    metalness: 0.02,
+    roughness: 0.40,
+    stone: ['#c7beb2','#aaa095','#8f857b']
+  },
+  'charcoal-stone': {
+    label: '深灰石紋',
+    color: 0x555653,
+    metalness: 0.02,
+    roughness: 0.42,
+    stone: ['#62635f','#4b4c49','#343532']
+  }
+});
+
 const FRIDGE_VARIANTS = Object.freeze({
   's1-silver': {
     label: '星礦銀 S1',
     color: 0xb5b8bb,
+    seam: 0x777b7d,
     metalness: 0.42,
     roughness: 0.34
   },
   'c1-beige-gray': {
     label: '淺灰米 C1',
     color: 0xc8bfb3,
+    seam: 0x9d968d,
     metalness: 0.22,
     roughness: 0.40
   },
   'w1-frost-white': {
     label: '凝霜白 W1',
     color: 0xebe9e3,
+    seam: 0xb8b7b2,
     metalness: 0.14,
     roughness: 0.42
   }
@@ -215,10 +254,12 @@ const addFridgeBtn = document.getElementById('addFridgeBtn');
 const fridgeVariantButtons = [...document.querySelectorAll('[data-fridge-variant]')];
 const addKitchenBtn = document.getElementById('addKitchenBtn');
 const kitchenVariantButtons = [...document.querySelectorAll('[data-kitchen-variant]')];
+const kitchenCountertopButtons = [...document.querySelectorAll('[data-kitchen-countertop]')];
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
 const woodTextureCache = new Map();
+const surfaceTextureCache = new Map();
 let currentSceneData = null;
 let currentGlbBytes = null;
 let currentFilename = '1004.skp';
@@ -431,6 +472,12 @@ function bindUI() {
     });
   });
 
+  kitchenCountertopButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setKitchenCountertopFromLibrary(button.dataset.kitchenCountertop);
+    });
+  });
+
   addFridgeBtn?.addEventListener('click', () => {
     const existing = getCurrentFridge();
     if (existing) {
@@ -457,18 +504,19 @@ function bindUI() {
   addKitchenBtn?.addEventListener('click', () => {
     const existing = getCurrentKitchen();
     if (existing) {
-      setStatus('Cleanup CENTRO 已放置於客廳牆面');
+      selectEditable(existing);
+      setStatus('Cleanup CENTRO 已存在 · 已選取，可移動 / 旋轉 / 刪除');
       return;
     }
 
+    const saved = readKitchenState();
     const kitchen = createCentroKitchen();
-    const saved = readKitchenState() || KITCHEN_DEFAULT_STATE;
-    applyKitchenVariant(kitchen, saved.variant, false);
-    kitchen.userData.variant = saved.variant;
-    modelRoot.add(kitchen);
-    writeKitchenState({ exists: true, variant: saved.variant });
+    applyKitchenState(kitchen, saved ? { ...saved, exists: true } : KITCHEN_DEFAULT_STATE);
+    editableRoot.add(kitchen);
+    saveKitchenState(kitchen);
+    selectEditable(kitchen);
     syncLibraryUI();
-    setStatus('Cleanup CENTRO 已放回客廳牆面');
+    setStatus('Cleanup CENTRO 已放回並選取 · 可移動 / 旋轉 / 刪除');
   });
 
   materialPresetButtons.forEach(button => {
@@ -840,6 +888,70 @@ function getWoodTexture(presetId, scope = 'floor') {
   return woodTextureCache.get(key);
 }
 
+function createStoneTexture(presetId) {
+  const preset = CENTRO_COUNTERTOP_VARIANTS[presetId];
+  if (!preset?.stone) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 384;
+  canvas.height = 384;
+  const ctx = canvas.getContext('2d');
+  const random = seededRandom(hashString('countertop:' + presetId));
+
+  ctx.fillStyle = '#' + preset.color.toString(16).padStart(6, '0');
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const colors = preset.stone;
+
+  // Fine mineral variation.
+  for (let i = 0; i < 1800; i++) {
+    const alpha = 0.015 + random() * 0.055;
+    ctx.fillStyle = colors[Math.floor(random() * colors.length)];
+    ctx.globalAlpha = alpha;
+    const r = 0.4 + random() * 1.8;
+    ctx.beginPath();
+    ctx.arc(random() * 384, random() * 384, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // A few soft veins — deliberately restrained so it still reads as a
+  // premium architectural countertop rather than marble wallpaper.
+  ctx.globalAlpha = 1;
+  for (let v = 0; v < 6; v++) {
+    const y0 = 30 + random() * 320;
+    const phase = random() * Math.PI * 2;
+    ctx.strokeStyle = presetId === 'charcoal-stone'
+      ? 'rgba(220,220,215,.10)'
+      : 'rgba(92,86,78,.10)';
+    ctx.lineWidth = 0.8 + random() * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, y0);
+    for (let x = 0; x <= 384; x += 24) {
+      ctx.lineTo(
+        x,
+        y0 + Math.sin(x * 0.020 + phase) * (5 + random() * 4)
+      );
+    }
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.8, 1.0);
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function getCountertopTexture(presetId) {
+  if (!surfaceTextureCache.has(presetId)) {
+    surfaceTextureCache.set(presetId, createStoneTexture(presetId));
+  }
+  return surfaceTextureCache.get(presetId);
+}
+
 function ensurePlanarUV(geometry, scale = 0.7) {
   if (!geometry?.attributes?.position) return;
   const pos = geometry.attributes.position;
@@ -1002,6 +1114,18 @@ function syncLibraryUI() {
     button.classList.toggle('selected', button.dataset.kitchenVariant === kitchenVariant);
   });
 
+  const kitchenCountertop =
+    kitchen?.userData?.countertop ||
+    savedKitchen?.countertop ||
+    KITCHEN_DEFAULT_STATE.countertop;
+
+  kitchenCountertopButtons.forEach(button => {
+    button.classList.toggle(
+      'selected',
+      button.dataset.kitchenCountertop === kitchenCountertop
+    );
+  });
+
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
     const scope = button.dataset.materialScope;
@@ -1145,9 +1269,18 @@ function readKitchenState() {
 
     return {
       exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : KITCHEN_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : KITCHEN_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : KITCHEN_DEFAULT_STATE.rotationY,
       variant: CENTRO_VARIANTS[parsed.variant]
         ? parsed.variant
-        : KITCHEN_DEFAULT_STATE.variant
+        : KITCHEN_DEFAULT_STATE.variant,
+      countertop: CENTRO_COUNTERTOP_VARIANTS[parsed.countertop]
+        ? parsed.countertop
+        : KITCHEN_DEFAULT_STATE.countertop
     };
   } catch (error) {
     console.warn('Unable to read CENTRO state.', error);
@@ -1159,15 +1292,82 @@ function writeKitchenState(state) {
   try {
     localStorage.setItem(KITCHEN_STORAGE_KEY, JSON.stringify({
       exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY),
       variant: CENTRO_VARIANTS[state.variant]
         ? state.variant
-        : KITCHEN_DEFAULT_STATE.variant
+        : KITCHEN_DEFAULT_STATE.variant,
+      countertop: CENTRO_COUNTERTOP_VARIANTS[state.countertop]
+        ? state.countertop
+        : KITCHEN_DEFAULT_STATE.countertop
     }));
     return true;
   } catch (error) {
     console.warn('Unable to persist CENTRO state.', error);
     return false;
   }
+}
+
+function saveKitchenState(kitchen) {
+  if (!kitchen) return false;
+
+  const saved = writeKitchenState({
+    exists: true,
+    x: kitchen.position.x,
+    y: 0,
+    z: kitchen.position.z,
+    rotationY: kitchen.rotation.y,
+    variant: kitchen.userData.variant || KITCHEN_DEFAULT_STATE.variant,
+    countertop: kitchen.userData.countertop || KITCHEN_DEFAULT_STATE.countertop
+  });
+
+  if (saved) kitchen.userData.hasSavedPlacement = true;
+  return saved;
+}
+
+function saveKitchenDeletedState() {
+  const current = readKitchenState() || KITCHEN_DEFAULT_STATE;
+  return writeKitchenState({ ...current, exists: false });
+}
+
+function getCurrentKitchen() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'cleanup-centro-207'
+  ) || null;
+}
+
+function applyKitchenState(kitchen, state) {
+  const next = state || KITCHEN_DEFAULT_STATE;
+
+  kitchen.position.set(next.x, 0, next.z);
+  kitchen.rotation.set(0, next.rotationY, 0);
+  kitchen.userData.floorY = 0;
+  kitchen.userData.hasSavedPlacement = Boolean(state);
+
+  applyKitchenVariant(
+    kitchen,
+    next.variant || KITCHEN_DEFAULT_STATE.variant,
+    false
+  );
+  applyKitchenCountertop(
+    kitchen,
+    next.countertop || KITCHEN_DEFAULT_STATE.countertop,
+    false
+  );
+}
+
+function restoreOrCreateKitchen() {
+  const saved = readKitchenState();
+  if (saved?.exists === false) return null;
+
+  const kitchen = createCentroKitchen();
+  applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+  editableRoot.add(kitchen);
+
+  if (!saved) saveKitchenState(kitchen);
+  return kitchen;
 }
 
 function readSavedFridgeState() {
@@ -1237,12 +1437,6 @@ function getCurrentFridge() {
   ) || null;
 }
 
-function getCurrentKitchen() {
-  return modelRoot?.children.find(
-    child => child.userData?.componentId === 'cleanup-centro-207'
-  ) || null;
-}
-
 function applyFridgeState(fridge, state) {
   const next = state || FRIDGE_DEFAULT_STATE;
   fridge.position.set(next.x, 0, next.z);
@@ -1262,20 +1456,6 @@ function restoreOrCreateFridge() {
 
   if (!saved) saveFridgeState(fridge);
   return fridge;
-}
-
-function restoreOrCreateKitchen() {
-  const saved = readKitchenState();
-  if (saved?.exists === false) return null;
-
-  const kitchen = createCentroKitchen();
-  const variant = saved?.variant || KITCHEN_DEFAULT_STATE.variant;
-  applyKitchenVariant(kitchen, variant, false);
-  kitchen.userData.variant = variant;
-  modelRoot.add(kitchen);
-
-  if (!saved) writeKitchenState({ exists: true, variant });
-  return kitchen;
 }
 
 function normalizeRadians(angle) {
@@ -1323,6 +1503,10 @@ function saveEditableState(object) {
 
   if (object.userData?.componentId === 'panasonic-nr-f552yt') {
     return saveFridgeState(object);
+  }
+
+  if (object.userData?.componentId === 'cleanup-centro-207') {
+    return saveKitchenState(object);
   }
 
   return false;
@@ -1430,9 +1614,8 @@ function restoreOrCreateWasher() {
 }
 
 function createCentroKitchen() {
-  // Wall measured from the current 1004 model:
-  // room door ends around x=4.67m; entrance-side door/wall begins near x=7.85m.
-  // Use a 207cm straight CENTRO run + a separate 70cm-class refrigerator bay.
+  // 207 cm straight Cleanup CENTRO run.
+  // Geometry is centred on the group origin so move/rotation controls feel natural.
   const width = 2.07;
   const depth = 0.65;
   const baseHeight = 0.86;
@@ -1442,12 +1625,18 @@ function createCentroKitchen() {
 
   const group = new THREE.Group();
   group.name = 'Cleanup_CENTRO_207';
+  group.userData.editable = true;
   group.userData.componentId = 'cleanup-centro-207';
   group.userData.label = 'Cleanup CENTRO 一字型 207 cm';
   group.userData.variant = KITCHEN_DEFAULT_STATE.variant;
+  group.userData.countertop = KITCHEN_DEFAULT_STATE.countertop;
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
 
-  // Placement on the user-marked living-room wall.
-  group.position.set(4.72, 0, -6.17);
+  const assembly = new THREE.Group();
+  assembly.name = 'CENTRO_Assembly';
+  assembly.position.set(-width / 2, 0, -depth / 2);
+  group.add(assembly);
 
   const cabinetMat = new THREE.MeshStandardMaterial({
     color: 0xaeb2b4,
@@ -1455,22 +1644,24 @@ function createCentroKitchen() {
     roughness: 0.40
   });
 
-  const sideMat = cabinetMat;
   const counterMat = new THREE.MeshStandardMaterial({
-    color: 0xc9c6c0,
-    metalness: 0.04,
-    roughness: 0.34
+    color: 0xb6bbbd,
+    metalness: 0.72,
+    roughness: 0.30
   });
+
   const stainlessMat = new THREE.MeshStandardMaterial({
     color: 0xa8afb2,
     metalness: 0.78,
     roughness: 0.28
   });
+
   const darkMat = new THREE.MeshStandardMaterial({
-    color: 0x17191a,
-    metalness: 0.24,
-    roughness: 0.32
+    color: 0x2a2b2b,
+    metalness: 0.20,
+    roughness: 0.38
   });
+
   const backsplashMat = new THREE.MeshStandardMaterial({
     color: 0xdedbd5,
     metalness: 0.02,
@@ -1483,22 +1674,20 @@ function createCentroKitchen() {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.name = name;
-    group.add(mesh);
+    assembly.add(mesh);
     return mesh;
   }
 
-  // Base carcass, front faces point +Z.
-  addBox(width, baseHeight, depth, width/2, baseHeight/2, depth/2, sideMat, 'CENTRO_base');
-
-  // Toe kick.
+  // Base cabinet and toe kick.
+  addBox(width, baseHeight, depth, width/2, baseHeight/2, depth/2, cabinetMat, 'CENTRO_base');
   addBox(width - 0.04, 0.08, 0.05, width/2, 0.04, depth + 0.005, darkMat, 'CENTRO_toekick');
 
-  // Three equal working zones: cook / prep / sink.
   const moduleW = width / 3;
+
+  // Drawer fronts / hidden handle detail.
   for (let i = 0; i < 3; i++) {
     const cx = moduleW * i + moduleW / 2;
 
-    // Drawer fronts.
     [0.18, 0.42, 0.68].forEach((cy, row) => {
       const h = row === 0 ? 0.16 : 0.22;
       addBox(
@@ -1513,11 +1702,10 @@ function createCentroKitchen() {
       );
     });
 
-    // Hidden handle line.
     addBox(
       moduleW - 0.035,
-      0.012,
-      0.012,
+      0.010,
+      0.010,
       cx,
       0.785,
       depth + 0.026,
@@ -1526,7 +1714,7 @@ function createCentroKitchen() {
     );
   }
 
-  // Countertop.
+  // Countertop: material can be selected independently from cabinet fronts.
   addBox(
     width + 0.035,
     counterThickness,
@@ -1538,7 +1726,7 @@ function createCentroKitchen() {
     'CENTRO_countertop'
   );
 
-  // Low backsplash.
+  // Backsplash.
   addBox(
     width,
     0.58,
@@ -1550,7 +1738,7 @@ function createCentroKitchen() {
     'CENTRO_backsplash'
   );
 
-  // Induction cooktop on left module.
+  // IH cooktop.
   addBox(
     moduleW * 0.72,
     0.018,
@@ -1562,22 +1750,21 @@ function createCentroKitchen() {
     'CENTRO_induction'
   );
 
-  // Two subtle burner rings.
   [moduleW*0.36, moduleW*0.64].forEach(px => {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.095, 0.006, 10, 40),
       new THREE.MeshStandardMaterial({
-        color: 0x565a5b,
-        metalness: 0.45,
-        roughness: 0.38
+        color: 0x686b6b,
+        metalness: 0.35,
+        roughness: 0.42
       })
     );
     ring.rotation.x = Math.PI / 2;
     ring.position.set(px, baseHeight + counterThickness + 0.024, depth * 0.52);
-    group.add(ring);
+    assembly.add(ring);
   });
 
-  // Sink on right module.
+  // Sink.
   const sinkX = moduleW * 2.5;
   addBox(
     moduleW * 0.68,
@@ -1590,8 +1777,7 @@ function createCentroKitchen() {
     'CENTRO_sink'
   );
 
-  // Sink inset.
-  const sinkInset = addBox(
+  addBox(
     moduleW * 0.55,
     0.035,
     0.31,
@@ -1599,14 +1785,14 @@ function createCentroKitchen() {
     baseHeight + counterThickness + 0.018,
     depth * 0.52,
     new THREE.MeshStandardMaterial({
-      color: 0x6f777a,
-      metalness: 0.75,
+      color: 0x777e80,
+      metalness: 0.72,
       roughness: 0.34
     }),
     'CENTRO_sink_bowl'
   );
 
-  // Faucet: vertical stem + spout.
+  // Faucet.
   const faucetStem = new THREE.Mesh(
     new THREE.CylinderGeometry(0.018, 0.018, 0.30, 20),
     stainlessMat
@@ -1616,7 +1802,7 @@ function createCentroKitchen() {
     baseHeight + 0.18,
     depth * 0.30
   );
-  group.add(faucetStem);
+  assembly.add(faucetStem);
 
   const faucetSpout = new THREE.Mesh(
     new THREE.TorusGeometry(0.10, 0.014, 10, 32, Math.PI),
@@ -1628,9 +1814,9 @@ function createCentroKitchen() {
     baseHeight + 0.32,
     depth * 0.36
   );
-  group.add(faucetSpout);
+  assembly.add(faucetSpout);
 
-  // Upper cabinets / range hood.
+  // Upper cabinets and range hood.
   const upperY = 1.88;
   addBox(
     moduleW - 0.015,
@@ -1653,7 +1839,7 @@ function createCentroKitchen() {
     'CENTRO_upper'
   );
 
-  const hood = addBox(
+  addBox(
     moduleW * 0.82,
     0.16,
     0.45,
@@ -1664,7 +1850,7 @@ function createCentroKitchen() {
     'CENTRO_hood'
   );
 
-  // Under-cabinet task light strip.
+  // Under-cabinet task light.
   const stripMat = new THREE.MeshStandardMaterial({
     color: 0xfff4df,
     emissive: 0xffe3b8,
@@ -1682,8 +1868,26 @@ function createCentroKitchen() {
     'CENTRO_underlight'
   );
 
-  group._variantMaterials = { cabinet: cabinetMat };
+  // Large invisible pick target for mobile selection.
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 1.02, 2.25, depth * 1.10),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  pickProxy.position.set(0, 1.12, 0);
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  group._variantMaterials = {
+    cabinet: cabinetMat,
+    countertop: counterMat
+  };
+
   applyKitchenVariant(group, KITCHEN_DEFAULT_STATE.variant, false);
+  applyKitchenCountertop(group, KITCHEN_DEFAULT_STATE.countertop, false);
   return group;
 }
 
@@ -1711,7 +1915,41 @@ function applyKitchenVariant(kitchen, variantId, save = true) {
     : KITCHEN_DEFAULT_STATE.variant;
 
   if (save) {
-    writeKitchenState({ exists: true, variant: kitchen.userData.variant });
+    saveKitchenState(kitchen);
+  }
+
+  syncLibraryUI();
+  return true;
+}
+
+function applyKitchenCountertop(kitchen, countertopId, save = true) {
+  if (!kitchen) return false;
+
+  const preset =
+    CENTRO_COUNTERTOP_VARIANTS[countertopId] ||
+    CENTRO_COUNTERTOP_VARIANTS[KITCHEN_DEFAULT_STATE.countertop];
+
+  const mat = kitchen._variantMaterials?.countertop;
+  if (!mat) return false;
+
+  mat.metalness = preset.metalness;
+  mat.roughness = preset.roughness;
+
+  if (preset.stone) {
+    mat.map = getCountertopTexture(countertopId);
+    mat.color.setHex(0xffffff);
+  } else {
+    mat.map = null;
+    mat.color.setHex(preset.color);
+  }
+
+  mat.needsUpdate = true;
+  kitchen.userData.countertop = CENTRO_COUNTERTOP_VARIANTS[countertopId]
+    ? countertopId
+    : KITCHEN_DEFAULT_STATE.countertop;
+
+  if (save) {
+    saveKitchenState(kitchen);
   }
 
   syncLibraryUI();
@@ -1722,17 +1960,41 @@ function setKitchenVariantFromLibrary(variantId) {
   let kitchen = getCurrentKitchen();
 
   if (!kitchen) {
+    const saved = readKitchenState();
     kitchen = createCentroKitchen();
-    modelRoot.add(kitchen);
+    applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+    editableRoot.add(kitchen);
   }
 
   applyKitchenVariant(kitchen, variantId, true);
-  setStatus('Cleanup CENTRO · ' + CENTRO_VARIANTS[variantId].label + ' · 已套用並記憶');
+  selectEditable(kitchen);
+  setStatus('Cleanup CENTRO 門板 · ' + CENTRO_VARIANTS[variantId].label + ' · 已套用並記憶');
+}
+
+function setKitchenCountertopFromLibrary(countertopId) {
+  let kitchen = getCurrentKitchen();
+
+  if (!kitchen) {
+    const saved = readKitchenState();
+    kitchen = createCentroKitchen();
+    applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+    editableRoot.add(kitchen);
+  }
+
+  applyKitchenCountertop(kitchen, countertopId, true);
+  selectEditable(kitchen);
+  setStatus(
+    'Cleanup CENTRO 檯面 · ' +
+    CENTRO_COUNTERTOP_VARIANTS[countertopId].label +
+    ' · 已套用並記憶'
+  );
 }
 
 function createPanasonicFridge() {
-  // Panasonic NR-F552YT official overall dimensions:
+  // Panasonic NR-F552YT official overall size:
   // W650 x D699 x H1850 mm.
+  // Visual proportions follow the supplied product image:
+  // 2 upper doors + 2 shallow mid drawers + 2 full-width lower drawers.
   const width = 0.650;
   const depth = 0.699;
   const height = 1.850;
@@ -1751,30 +2013,37 @@ function createPanasonicFridge() {
     metalness: 0.42,
     roughness: 0.34
   });
-  const gapMat = new THREE.MeshStandardMaterial({
-    color: 0x292b2c,
+
+  // Light, subtle seams — no heavy black framework.
+  const seamMat = new THREE.MeshStandardMaterial({
+    color: 0x777b7d,
     metalness: 0.18,
-    roughness: 0.44
-  });
-  const displayMat = new THREE.MeshStandardMaterial({
-    color: 0x273035,
-    emissive: 0x1e3843,
-    emissiveIntensity: 0.22,
-    roughness: 0.28
+    roughness: 0.52
   });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), bodyMat);
+  const displayMat = new THREE.MeshStandardMaterial({
+    color: 0x5e6669,
+    emissive: 0x25363c,
+    emissiveIntensity: 0.10,
+    roughness: 0.36
+  });
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    bodyMat
+  );
   body.position.y = height / 2;
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
 
   const frontZ = depth / 2 + 0.010;
-  const margin = 0.014;
+  const edge = 0.010;
+  const seam = 0.004;
 
-  function addFrontPanel(w, h, x, y, name) {
+  function addPanel(w, h, x, y, name) {
     const panel = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, 0.018),
+      new THREE.BoxGeometry(w, h, 0.012),
       bodyMat
     );
     panel.position.set(x, y, frontZ);
@@ -1785,58 +2054,103 @@ function createPanasonicFridge() {
     return panel;
   }
 
-  // Six-door visual layout.
-  const upperH = 0.79;
-  const midH = 0.35;
-  const lowerH = 0.46;
-  const upperY = height - upperH/2 - 0.02;
-  const midY = lowerH + midH/2 + 0.18;
-  const lowerY = lowerH/2 + 0.04;
-
-  addFrontPanel(width/2 - 0.020, upperH, -width/4, upperY, 'Fridge_upper_left');
-  addFrontPanel(width/2 - 0.020, upperH,  width/4, upperY, 'Fridge_upper_right');
-
-  addFrontPanel(width/2 - 0.020, midH, -width/4, midY, 'Fridge_mid_left');
-  addFrontPanel(width/2 - 0.020, midH,  width/4, midY, 'Fridge_mid_right');
-
-  addFrontPanel(width/2 - 0.020, lowerH, -width/4, lowerY, 'Fridge_lower_left');
-  addFrontPanel(width/2 - 0.020, lowerH,  width/4, lowerY, 'Fridge_lower_right');
-
-  // Door seams / handleless shadow gaps.
-  [height-upperH-0.035, lowerH+midH+0.10, lowerH+0.045].forEach(y => {
-    const seam = new THREE.Mesh(
-      new THREE.BoxGeometry(width*0.94, 0.010, 0.026),
-      gapMat
+  function addHSeam(y) {
+    const line = new THREE.Mesh(
+      new THREE.BoxGeometry(width - edge*2, seam, 0.010),
+      seamMat
     );
-    seam.position.set(0, y, frontZ + 0.014);
-    group.add(seam);
-  });
+    line.position.set(0, y, frontZ + 0.009);
+    group.add(line);
+  }
 
-  const verticalSeam = new THREE.Mesh(
-    new THREE.BoxGeometry(0.009, height*0.93, 0.025),
-    gapMat
-  );
-  verticalSeam.position.set(0, height*0.52, frontZ + 0.014);
-  group.add(verticalSeam);
+  function addVSeam(x, y, h) {
+    const line = new THREE.Mesh(
+      new THREE.BoxGeometry(seam, h, 0.010),
+      seamMat
+    );
+    line.position.set(x, y, frontZ + 0.009);
+    group.add(line);
+  }
 
-  // Door-edge touch panel.
+  // Vertical zoning from bottom to top.
+  const bottomH = 0.43;
+  const lowerH = 0.36;
+  const shallowH = 0.18;
+  const gapTotal = 0.04;
+  const upperH = height - bottomH - lowerH - shallowH - gapTotal;
+
+  const bottomY = bottomH / 2 + edge;
+  const lowerY = bottomH + lowerH / 2 + edge + 0.010;
+  const shallowY = bottomH + lowerH + shallowH / 2 + edge + 0.020;
+  const upperY = height - upperH / 2 - edge;
+
+  // Upper doors are asymmetrical like the reference photo.
+  const leftRatio = 0.36;
+  const leftW = width * leftRatio - seam/2 - edge;
+  const rightW = width - leftW - seam - edge*2;
+
+  const leftX = -width/2 + edge + leftW/2;
+  const rightX = width/2 - edge - rightW/2;
+  const upperSplitX = -width/2 + edge + leftW + seam/2;
+
+  addPanel(leftW, upperH, leftX, upperY, 'Fridge_upper_left');
+  addPanel(rightW, upperH, rightX, upperY, 'Fridge_upper_right');
+  addVSeam(upperSplitX, upperY, upperH - edge);
+
+  // Two shallow middle drawers.
+  const halfW = (width - edge*2 - seam) / 2;
+  addPanel(halfW, shallowH, -halfW/2 - seam/2, shallowY, 'Fridge_shallow_left');
+  addPanel(halfW, shallowH,  halfW/2 + seam/2, shallowY, 'Fridge_shallow_right');
+  addVSeam(0, shallowY, shallowH - edge);
+
+  // Lower two drawers are each full-width.
+  addPanel(width - edge*2, lowerH, 0, lowerY, 'Fridge_lower_full');
+  addPanel(width - edge*2, bottomH - edge, 0, bottomY, 'Fridge_bottom_full');
+
+  const y1 = bottomH + 0.015;
+  const y2 = bottomH + lowerH + 0.020;
+  const y3 = bottomH + lowerH + shallowH + 0.025;
+  addHSeam(y1);
+  addHSeam(y2);
+  addHSeam(y3);
+
+  // Small, restrained touch indicator on upper-right door.
   const display = new THREE.Mesh(
-    new THREE.BoxGeometry(0.045, 0.16, 0.012),
+    new THREE.BoxGeometry(0.020, 0.055, 0.006),
     displayMat
   );
-  display.position.set(width*0.39, height*0.71, frontZ + 0.023);
+  display.position.set(width*0.18, upperY - upperH*0.18, frontZ + 0.015);
   group.add(display);
 
-  // Mobile pick proxy.
+  // Subtle brand mark near top right, represented as a light metallic dash.
+  const brandMark = new THREE.Mesh(
+    new THREE.BoxGeometry(0.070, 0.008, 0.004),
+    new THREE.MeshStandardMaterial({
+      color: 0x9fa2a1,
+      metalness: 0.40,
+      roughness: 0.38
+    })
+  );
+  brandMark.position.set(width*0.29, height - 0.070, frontZ + 0.014);
+  group.add(brandMark);
+
   const pickProxy = new THREE.Mesh(
     new THREE.BoxGeometry(width*1.03, height*1.02, depth*1.03),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
   );
   pickProxy.position.y = height/2;
   pickProxy.userData.pickProxy = true;
   group.add(pickProxy);
 
-  group._variantMaterials = { body: bodyMat };
+  group._variantMaterials = {
+    body: bodyMat,
+    seam: seamMat
+  };
+
   applyFridgeVariant(group, FRIDGE_DEFAULT_STATE.variant, false);
   return group;
 }
@@ -1846,12 +2160,20 @@ function applyFridgeVariant(fridge, variantId, save = true) {
 
   const variant = FRIDGE_VARIANTS[variantId] || FRIDGE_VARIANTS[FRIDGE_DEFAULT_STATE.variant];
   const bodyMat = fridge._variantMaterials?.body;
+  const seamMat = fridge._variantMaterials?.seam;
   if (!bodyMat) return false;
 
   bodyMat.color.setHex(variant.color);
   bodyMat.metalness = variant.metalness;
   bodyMat.roughness = variant.roughness;
   bodyMat.needsUpdate = true;
+
+  if (seamMat) {
+    seamMat.color.setHex(variant.seam);
+    seamMat.metalness = 0.16;
+    seamMat.roughness = 0.52;
+    seamMat.needsUpdate = true;
+  }
 
   fridge.userData.variant = FRIDGE_VARIANTS[variantId]
     ? variantId
@@ -2100,6 +2422,8 @@ function deleteSelectedEditable() {
     saveWasherDeletedState();
   } else if (componentId === 'panasonic-nr-f552yt') {
     saveFridgeDeletedState();
+  } else if (componentId === 'cleanup-centro-207') {
+    saveKitchenDeletedState();
   }
 
   objectToolbar?.classList.add('hidden');
@@ -2725,7 +3049,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-fridge-library-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-centro-editable-countertop-fridge-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
