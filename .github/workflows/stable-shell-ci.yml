@@ -1,0 +1,41 @@
+name: stable shell hotfix CI
+on:
+  push:
+    branches: [fix/v6-stable-shell]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - name: Install viewer
+        run: npm ci
+        working-directory: viewer
+      - name: Stable shell regression tests
+        run: |
+          node --test tests/v6-production-entry.test.mjs
+          find tests -name '*.test.mjs' ! -name 'v6-*' -print0 | xargs -0 node --test
+        working-directory: viewer
+      - name: Build viewer
+        run: npm run build
+        working-directory: viewer
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: viewer
+      - name: Browser smoke
+        run: npm run smoke -- --no-build
+        working-directory: viewer
+      - name: Upload smoke screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stable-shell-${{ github.sha }}
+          path: viewer/output/smoke/
+          if-no-files-found: warn
