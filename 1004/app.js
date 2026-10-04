@@ -3,8 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
-const OPENSKP_WASM_JS = 'https://iamahsanmehmood.github.io/openskp/wasm/openskp.js';
-const OPENSKP_WASM_BASE = 'https://iamahsanmehmood.github.io/openskp/wasm/';
+const OPENSKP_WASM_JS = './vendor/openskp.js';
+const OPENSKP_WASM_BASE = 'https://cdn.jsdelivr.net/gh/iamahsanmehmood/openskp@python-v1.3.0/examples/web-viewer/wasm/';
 const LARGE_FILE_BYTES = 50 * 1024 * 1024;
 
 const viewport = document.getElementById('viewport');
