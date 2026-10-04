@@ -2018,12 +2018,12 @@ function setKitchenCountertopFromLibrary(countertopId) {
 
 function createPanasonicFridge() {
   // Panasonic NR-F601WX official overall size:
-  // W650 x D699 x H1850 mm.
-  // Visual proportions follow the supplied product image:
-  // 2 upper doors + 2 shallow mid drawers + 2 full-width lower drawers.
-  const width = 0.650;
-  const depth = 0.699;
-  const height = 1.850;
+  // W685 x D745 x H1828 mm, effective volume 600 L.
+  // Frameless glass / mirror six-door proportions:
+  // 2 upper doors + 2 shallow middle drawers + 2 full-width lower drawers.
+  const width = 0.685;
+  const depth = 0.745;
+  const height = 1.828;
 
   const group = new THREE.Group();
   group.name = 'Panasonic_NR-F601WX';
@@ -3081,7 +3081,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-nr-f601wx-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-nr-f601wx-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
