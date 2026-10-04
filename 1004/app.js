@@ -39,7 +39,7 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf6f3ed);
+  scene.background = new THREE.Color(0xece7de);
 
   camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.01, 500);
   camera.position.set(10, 9, 10);
@@ -52,10 +52,10 @@ function initThree() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 0.86;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xf6f3ed, 1);
+  renderer.setClearColor(0xece7de, 1);
   viewport.appendChild(renderer.domElement);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -77,10 +77,10 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.target.set(5, 1, -3);
 
-  scene.add(new THREE.HemisphereLight(0xfffbf4, 0xd8d3c9, 2.35));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.38));
+  scene.add(new THREE.HemisphereLight(0xfff8ec, 0xb8b0a4, 1.25));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.16));
 
-  sunLight = new THREE.DirectionalLight(0xfff4dc, 3.25);
+  sunLight = new THREE.DirectionalLight(0xffefcf, 1.85);
   sunLight.position.set(10, 16, 9);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -90,7 +90,7 @@ function initThree() {
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xe8f0ff, 0.75);
+  const fill = new THREE.DirectionalLight(0xdfe8f2, 0.32);
   fill.position.set(-8, 7, -10);
   scene.add(fill);
 
@@ -335,12 +335,12 @@ function createWoodTexture() {
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#d8bc91';
+  ctx.fillStyle = '#caa876';
   ctx.fillRect(0, 0, 512, 512);
 
   const plankH = 64;
   for (let y = 0; y < 512; y += plankH) {
-    ctx.fillStyle = y % (plankH * 2) === 0 ? '#dcc49b' : '#d4b78c';
+    ctx.fillStyle = y % (plankH * 2) === 0 ? '#d2b181' : '#c7a373';
     ctx.fillRect(0, y, 512, plankH);
 
     ctx.strokeStyle = 'rgba(118, 91, 58, 0.18)';
@@ -399,14 +399,14 @@ function styleNordicMaterial(material, mesh) {
   material.roughness = 0.82;
 
   if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
-    setColor(0xdfe9e7);
+    setColor(0xc9d6d3);
     material.transparent = true;
-    material.opacity = name.includes('railing') ? 0.30 : 0.22;
+    material.opacity = name.includes('railing') ? 0.36 : 0.30;
     material.roughness = 0.18;
     material.metalness = 0;
     material.depthWrite = false;
   } else if (name.includes('glass railing color')) {
-    setColor(0xaeb9b6);
+    setColor(0x8b9693);
     material.roughness = 0.42;
     material.metalness = 0.34;
   } else if (
@@ -416,7 +416,7 @@ function styleNordicMaterial(material, mesh) {
     name.includes('steel') ||
     name.includes('shower')
   ) {
-    setColor(0x606563);
+    setColor(0x4f5452);
     material.metalness = 0.52;
     material.roughness = 0.36;
   } else if (
@@ -426,20 +426,20 @@ function styleNordicMaterial(material, mesh) {
     name.includes('1014065') ||
     name.includes('1620856')
   ) {
-    setColor(0xd2ae7d);
+    setColor(0xc79d69);
     material.metalness = 0;
     material.roughness = 0.78;
 
     if (name.includes('000__wood__matte')) {
       ensurePlanarUV(mesh.geometry, 0.66);
       material.map = nordicWoodTexture;
-      material.color.setHex(0xf2e2c5);
+      material.color.setHex(0xdfc7a0);
     }
   } else if (name.includes('瓷砖 47')) {
-    setColor(0xd8d2ca);
+    setColor(0xcfc8be);
     material.roughness = 0.92;
   } else if (name.includes('瓷砖')) {
-    setColor(0xe9e4dc);
+    setColor(0xddd7cf);
     material.roughness = 0.88;
   } else if (
     name.includes('color m07') ||
@@ -450,10 +450,10 @@ function styleNordicMaterial(material, mesh) {
     setColor(0x404442);
     material.roughness = 0.62;
   } else if (name.includes('plastic') || name.includes('塑料')) {
-    setColor(0xeeeae3);
+    setColor(0xe1dbd2);
     material.roughness = 0.78;
   } else {
-    setColor(0xf2efe9);
+    setColor(0xe6e0d8);
     material.metalness = 0;
     material.roughness = 0.9;
   }
@@ -497,10 +497,10 @@ function addBed(parent, x, z, rotation = 0) {
   g.position.set(x, 0, z);
   g.rotation.y = rotation;
 
-  const wood = new THREE.MeshStandardMaterial({ color: 0xd2ae7c, roughness: 0.82 });
-  const fabric = new THREE.MeshStandardMaterial({ color: 0xf3eee5, roughness: 0.96 });
-  const sheet = new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.98 });
-  const accent = new THREE.MeshStandardMaterial({ color: 0x8f9b79, roughness: 0.94 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0xbf9260, roughness: 0.82 });
+  const fabric = new THREE.MeshStandardMaterial({ color: 0xe8dfd2, roughness: 0.96 });
+  const sheet = new THREE.MeshStandardMaterial({ color: 0xd8cdbc, roughness: 0.98 });
+  const accent = new THREE.MeshStandardMaterial({ color: 0x758464, roughness: 0.94 });
 
   g.add(roundedBox(1.7, 0.20, 2.05, wood, 0, 0.12, 0));
   g.add(roundedBox(1.62, 0.23, 1.92, fabric, 0, 0.31, 0.02));
@@ -518,9 +518,9 @@ function addSofa(parent, x, z, rotation = 0) {
   g.position.set(x, 0, z);
   g.rotation.y = rotation;
 
-  const fabric = new THREE.MeshStandardMaterial({ color: 0xe7e0d5, roughness: 0.96 });
-  const light = new THREE.MeshStandardMaterial({ color: 0xf5f1ea, roughness: 0.98 });
-  const green = new THREE.MeshStandardMaterial({ color: 0x879575, roughness: 0.94 });
+  const fabric = new THREE.MeshStandardMaterial({ color: 0xd8d0c5, roughness: 0.96 });
+  const light = new THREE.MeshStandardMaterial({ color: 0xeee8df, roughness: 0.98 });
+  const green = new THREE.MeshStandardMaterial({ color: 0x6f7f63, roughness: 0.94 });
 
   g.add(roundedBox(2.20, 0.34, 0.88, fabric, 0, 0.28, 0));
   g.add(roundedBox(2.18, 0.68, 0.18, fabric, 0, 0.68, -0.36));
@@ -535,7 +535,7 @@ function addSofa(parent, x, z, rotation = 0) {
 }
 
 function addCoffeeTable(parent, x, z) {
-  const wood = new THREE.MeshStandardMaterial({ color: 0xcda875, roughness: 0.78 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0xba8d5d, roughness: 0.78 });
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.055, 40), wood);
   top.position.set(x, 0.40, z);
   top.castShadow = true;
@@ -549,7 +549,7 @@ function addCoffeeTable(parent, x, z) {
 }
 
 function addDiningSet(parent, x, z) {
-  const wood = new THREE.MeshStandardMaterial({ color: 0xcba570, roughness: 0.82 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0xb98956, roughness: 0.82 });
   parent.add(roundedBox(1.34, 0.075, 0.78, wood, x, 0.74, z));
 
   const legPositions = [
@@ -579,8 +579,8 @@ function addDiningSet(parent, x, z) {
 }
 
 function addPlant(parent, x, z, scale = 1) {
-  const potMat = new THREE.MeshStandardMaterial({ color: 0xd8d0c3, roughness: 0.9 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x718263, roughness: 0.86 });
+  const potMat = new THREE.MeshStandardMaterial({ color: 0xbeb4a7, roughness: 0.9 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x5f7256, roughness: 0.86 });
 
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * scale, 0.14 * scale, 0.28 * scale, 24), potMat);
   pot.position.set(x, 0.14 * scale, z);
@@ -608,7 +608,7 @@ function addNordicFurniture(parent) {
   decor.name = 'Nordic_Staging';
 
   const rugMat = new THREE.MeshStandardMaterial({
-    color: 0xe9e2d7,
+    color: 0xdcd3c6,
     roughness: 1,
     side: THREE.DoubleSide
   });
@@ -652,7 +652,7 @@ function updatePresentationGround(box) {
     new THREE.ShadowMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.16
+      opacity: 0.26
     })
   );
   shadow.rotation.x = -Math.PI / 2;
