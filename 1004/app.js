@@ -1,10 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const OPENSKP_ESM = 'https://esm.sh/openskp@1.3.0?bundle';
 const OPENSKP_WASM_JS = './vendor/openskp.js';
@@ -25,7 +21,7 @@ const modelInfo = document.getElementById('modelInfo');
 const fitBtn = document.getElementById('fitBtn');
 const exportBtn = document.getElementById('exportBtn');
 
-let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, composer, ssaoPass;
+let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight;
 let orthoSize = 12;
 let nordicWoodTexture = null;
 let currentSceneData = null;
@@ -42,7 +38,7 @@ tryAutoLoadRepoModel();
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xd9d3c9);
+  scene.background = new THREE.Color(0xe4ded4);
 
   camera = new THREE.OrthographicCamera(-6, 6, 6, -6, 0.01, 500);
   camera.position.set(10, 9, 10);
@@ -55,10 +51,10 @@ function initThree() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 0.72;
+  renderer.toneMappingExposure = 0.92;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0xd9d3c9, 1);
+  renderer.setClearColor(0xe4ded4, 1);
   viewport.appendChild(renderer.domElement);
 
   scene.environment = null;
@@ -76,20 +72,20 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.target.set(5, 1, -3);
 
-  scene.add(new THREE.HemisphereLight(0xfff7e8, 0xa79f94, 0.46));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.035));
+  scene.add(new THREE.HemisphereLight(0xfff7e8, 0xb4aca1, 0.95));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.11));
 
-  sunLight = new THREE.DirectionalLight(0xffedcc, 1.22);
+  sunLight = new THREE.DirectionalLight(0xffedcc, 2.05);
   sunLight.position.set(10, 16, 9);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 3;
-  sunLight.shadow.bias = -0.00015;
+  sunLight.shadow.bias = -0.00008;
   sunLight.target.position.set(5, 0, -3);
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xdbe4ee, 0.10);
+  const fill = new THREE.DirectionalLight(0xdbe4ee, 0.22);
   fill.position.set(-8, 7, -10);
   scene.add(fill);
 
@@ -101,22 +97,11 @@ function initThree() {
 
   nordicWoodTexture = createWoodTexture();
 
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-
-  ssaoPass = new SSAOPass(scene, camera, 1, 1);
-  ssaoPass.kernelRadius = 0.18;
-  ssaoPass.minDistance = 0.001;
-  ssaoPass.maxDistance = 0.055;
-  ssaoPass.output = SSAOPass.OUTPUT.Default;
-  composer.addPass(ssaoPass);
-  composer.addPass(new OutputPass());
-
   window.addEventListener('resize', resize);
   resize();
   renderer.setAnimationLoop(() => {
     controls.update();
-    composer.render();
+    renderer.render(scene, camera);
   });
 }
 
@@ -132,8 +117,6 @@ function resize() {
   camera.updateProjectionMatrix();
 
   renderer.setSize(w, h, false);
-  composer?.setSize(w, h);
-  ssaoPass?.setSize(w, h);
 }
 
 function bindUI() {
@@ -441,14 +424,14 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
   material.roughness = 0.82;
 
   if (architectureClass === 'floor') {
-    setColor(0xc49b68);
+    setColor(0xc0905c);
     material.metalness = 0;
     material.roughness = 0.88;
     ensurePlanarUV(mesh.geometry, 0.78);
     material.map = nordicWoodTexture;
     nordicWoodTexture.repeat.set(1.25, 1.25);
   } else if (architectureClass === 'wall') {
-    setColor(0xcfc8be);
+    setColor(0xd8d1c7);
     material.metalness = 0;
     material.roughness = 0.94;
     material.map = null;
@@ -507,7 +490,7 @@ function styleNordicMaterial(material, mesh, architectureClass = 'other') {
     setColor(0xe1dbd2);
     material.roughness = 0.78;
   } else {
-    setColor(0xd6cec3);
+    setColor(0xd0c7bc);
     material.metalness = 0;
     material.roughness = 0.9;
   }
@@ -707,7 +690,7 @@ function updatePresentationGround(box) {
     new THREE.ShadowMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.34
+      opacity: 0.22
     })
   );
   shadow.rotation.x = -Math.PI / 2;
