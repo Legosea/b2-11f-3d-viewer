@@ -35,4 +35,4 @@ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.data
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(viewport); resize(); setView('axon');
 function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);} loop();
-window.v6={scene,camera,controls,architecture,setView};
+window.v6={scene,camera,renderer,controls,architecture,setView};

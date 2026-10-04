@@ -19,3 +19,16 @@ jobs:
       - name: v6 build
         run: npm run build
         working-directory: viewer
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: viewer
+      - name: v6 browser smoke
+        run: node scripts/v6-smoke.mjs
+        working-directory: viewer
+      - name: Upload v6 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b2-v6-white-${{ github.sha }}
+          path: viewer/output/v6-smoke/
+          if-no-files-found: warn
