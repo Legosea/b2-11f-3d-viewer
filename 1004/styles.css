@@ -1,6 +1,6 @@
 :root{
   color-scheme:light;
-  --bg:#ece7de;
+  --bg:#ded9d0;
   --panel:rgba(255,255,255,.90);
   --panel2:#f7f4ee;
   --line:#ddd8cf;
@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 html,body{
   margin:0;width:100%;height:100%;overflow:hidden;
-  background:#ece7de;color:var(--text);
+  background:#ded9d0;color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif
 }
 button,input{font:inherit}
@@ -35,7 +35,7 @@ button,input{font:inherit}
 .button.big{padding:11px 18px}
 .viewer{
   position:relative;min-height:0;
-  background:radial-gradient(circle at 50% 35%,#f7f3ec 0,#ece7de 60%,#e3ddd3 100%)
+  background:radial-gradient(circle at 50% 32%,#ebe7df 0,#ded9d0 62%,#d3ccc2 100%)
 }
 #viewport{position:absolute;inset:0}
 #viewport canvas{display:block;width:100%;height:100%;touch-action:none}
@@ -54,7 +54,7 @@ button,input{font:inherit}
 .drop-card h2{margin:0 0 8px;font-size:22px}
 .drop-card p{margin:0 auto 18px;color:var(--muted);font-size:13px;line-height:1.65;max-width:430px}
 .drop-card small{display:block;margin-top:14px;color:#9f978c;font-size:11px}
-.loading{background:rgba(236,231,222,.90);flex-direction:column;gap:10px;text-align:center;padding:20px}
+.loading{background:rgba(222,217,208,.90);flex-direction:column;gap:10px;text-align:center;padding:20px}
 .hidden{display:none!important}
 .spinner{
   width:34px;height:34px;border:3px solid #ddd5ca;border-top-color:var(--accent);
