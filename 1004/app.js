@@ -279,6 +279,13 @@ const materialTargets = {
   roomDoor: new Set()
 };
 
+const WALL_COLLISION_CLEARANCE = 0.012; // 12 mm furniture-to-wall safety gap
+const WALL_SWEEP_STEP = 0.02;           // 20 mm swept-movement sampling
+let wallColliders = [];
+const collisionBoxA = new THREE.Box3();
+const collisionBoxB = new THREE.Box3();
+const collisionSize = new THREE.Vector3();
+
 initThree();
 bindUI();
 tryAutoLoadRepoModel();
@@ -356,16 +363,27 @@ function initThree() {
   transformControls.setRotationSnap(null);
   transformControls.addEventListener('dragging-changed', event => {
     controls.enabled = !event.value;
+
+    if (event.value && selectedEditable) {
+      // Snapshot the last legal transform before a drag begins.
+      selectedEditable.userData.lastCollisionSafePosition =
+        selectedEditable.position.clone();
+      selectedEditable.userData.lastCollisionSafeRotationY =
+        selectedEditable.rotation.y;
+    }
   });
   transformControls.addEventListener('objectChange', () => {
     if (!selectedEditable) return;
 
     selectedEditable.position.y = selectedEditable.userData.floorY ?? 0;
 
-    if (editableMode === 'rotate') {
+    if (editableMode === 'translate') {
+      resolveEditableWallCollision(selectedEditable);
+    } else if (editableMode === 'rotate') {
       selectedEditable.rotation.x = 0;
       selectedEditable.rotation.z = 0;
       applyRoomAngleMagnet(selectedEditable, false);
+      resolveEditableRotationCollision(selectedEditable);
     }
 
     clearTimeout(washerSaveTimer);
@@ -379,8 +397,12 @@ function initThree() {
 
     if (editableMode === 'rotate') {
       applyRoomAngleMagnet(selectedEditable, true);
+      resolveEditableRotationCollision(selectedEditable);
+    } else {
+      resolveEditableWallCollision(selectedEditable);
     }
 
+    rememberEditableCollisionSafeState(selectedEditable);
     saveEditableState(selectedEditable);
   });
   scene.add(transformControls.getHelper());
@@ -686,6 +708,8 @@ async function loadViaJs(buffer, filename) {
     modelRoot.add(mesh);
   }
 
+  rebuildWallColliders();
+
   const elapsed = Math.round(performance.now() - t0);
   modeBadge.textContent = '完整解析';
   modelInfo.textContent = 'SKP ' + (model.version || '') + ' · ' + prims.length + ' meshes';
@@ -731,6 +755,7 @@ async function loadViaWasm(buffer, filename) {
     }
   });
   modelRoot.add(gltf.scene);
+  rebuildWallColliders();
 
   const elapsed = Math.round(performance.now() - t0);
   modeBadge.textContent = 'WASM 快速模式';
@@ -1482,6 +1507,251 @@ function restoreOrCreateFridge() {
 
   if (!saved) saveFridgeState(fridge);
   return fridge;
+}
+
+function rebuildWallColliders() {
+  wallColliders = [];
+
+  modelRoot.updateWorldMatrix(true, true);
+
+  modelRoot.traverse(object => {
+    if (!object.isMesh || !object.visible || !object.geometry) return;
+
+    // Generated architectural corrections can stay collidable, but anything
+    // explicitly marked non-collidable is ignored.
+    if (object.userData?.ignoreWallCollision) return;
+
+    collisionBoxA.setFromObject(object);
+    if (collisionBoxA.isEmpty()) return;
+
+    collisionBoxA.getSize(collisionSize);
+
+    const height = collisionSize.y;
+    const width = collisionSize.x;
+    const depth = collisionSize.z;
+
+    // Wall heuristic:
+    // - residential full-height element
+    // - thin in X or Z
+    // - meaningful run length in the other horizontal axis
+    //
+    // This excludes flooring, countertops, sanitary fixtures, etc., while
+    // keeping the apartment partitions / exterior wall planes.
+    const tallEnough = height >= 1.35;
+    const xWall = width <= 0.42 && depth >= 0.38;
+    const zWall = depth <= 0.42 && width >= 0.38;
+
+    if (!tallEnough || !(xWall || zWall)) return;
+
+    wallColliders.push({
+      box: collisionBoxA.clone(),
+      name: object.name || 'wall'
+    });
+  });
+
+  console.info('[collision] wall colliders:', wallColliders.length);
+}
+
+function getEditableCollisionBox(object, target = new THREE.Box3()) {
+  target.makeEmpty();
+  if (!object) return target;
+
+  object.updateWorldMatrix(true, true);
+
+  object.traverse(child => {
+    if (
+      !child.isMesh ||
+      !child.visible ||
+      child.userData?.pickProxy ||
+      !child.geometry
+    ) return;
+
+    if (!child.geometry.boundingBox) {
+      child.geometry.computeBoundingBox();
+    }
+
+    if (!child.geometry.boundingBox) return;
+
+    collisionBoxB
+      .copy(child.geometry.boundingBox)
+      .applyMatrix4(child.matrixWorld);
+
+    target.union(collisionBoxB);
+  });
+
+  return target;
+}
+
+function editableIntersectsWall(object) {
+  if (!object || !wallColliders.length) return false;
+
+  const objectBox = getEditableCollisionBox(object, collisionBoxA);
+  if (objectBox.isEmpty()) return false;
+
+  for (const collider of wallColliders) {
+    const wall = collider.box;
+
+    // Vertical overlap is required so furniture on one floor cannot collide
+    // with unrelated geometry above/below.
+    const overlapsY =
+      objectBox.max.y > wall.min.y + 0.02 &&
+      objectBox.min.y < wall.max.y - 0.02;
+
+    if (!overlapsY) continue;
+
+    // Inflate only the wall footprint by a small real-world clearance.
+    const overlapsX =
+      objectBox.max.x > wall.min.x - WALL_COLLISION_CLEARANCE &&
+      objectBox.min.x < wall.max.x + WALL_COLLISION_CLEARANCE;
+
+    const overlapsZ =
+      objectBox.max.z > wall.min.z - WALL_COLLISION_CLEARANCE &&
+      objectBox.min.z < wall.max.z + WALL_COLLISION_CLEARANCE;
+
+    if (overlapsX && overlapsZ) return true;
+  }
+
+  return false;
+}
+
+function rememberEditableCollisionSafeState(object) {
+  if (!object) return;
+
+  object.userData.lastCollisionSafePosition = object.position.clone();
+  object.userData.lastCollisionSafeRotationY = object.rotation.y;
+}
+
+function sweepEditableAxis(object, axis, startValue, endValue) {
+  const delta = endValue - startValue;
+  if (Math.abs(delta) < 1e-7) return startValue;
+
+  const steps = Math.max(
+    1,
+    Math.ceil(Math.abs(delta) / WALL_SWEEP_STEP)
+  );
+
+  let accepted = startValue;
+
+  for (let i = 1; i <= steps; i++) {
+    const candidate = THREE.MathUtils.lerp(
+      startValue,
+      endValue,
+      i / steps
+    );
+
+    object.position[axis] = candidate;
+    object.updateMatrixWorld(true);
+
+    if (editableIntersectsWall(object)) {
+      object.position[axis] = accepted;
+      object.updateMatrixWorld(true);
+      return accepted;
+    }
+
+    accepted = candidate;
+  }
+
+  return accepted;
+}
+
+function resolveEditableWallCollision(object) {
+  if (!object || !wallColliders.length) return false;
+
+  const proposedX = object.position.x;
+  const proposedZ = object.position.z;
+
+  const safe =
+    object.userData.lastCollisionSafePosition?.clone() ||
+    object.position.clone();
+
+  // If a legacy saved position was already illegal, keep the current state
+  // rather than violently jumping the object. The next legal movement will
+  // establish a fresh safe point.
+  object.position.set(
+    safe.x,
+    object.userData.floorY ?? safe.y,
+    safe.z
+  );
+  object.updateMatrixWorld(true);
+
+  const safeWasColliding = editableIntersectsWall(object);
+  if (safeWasColliding) {
+    object.position.set(
+      proposedX,
+      object.userData.floorY ?? 0,
+      proposedZ
+    );
+    object.updateMatrixWorld(true);
+
+    if (!editableIntersectsWall(object)) {
+      rememberEditableCollisionSafeState(object);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Resolve X then Z independently. This intentionally allows the object to
+  // slide along a wall when the user drags diagonally into it.
+  const resolvedX = sweepEditableAxis(
+    object,
+    'x',
+    safe.x,
+    proposedX
+  );
+  object.position.x = resolvedX;
+
+  const resolvedZ = sweepEditableAxis(
+    object,
+    'z',
+    safe.z,
+    proposedZ
+  );
+  object.position.z = resolvedZ;
+
+  object.position.y = object.userData.floorY ?? 0;
+  object.updateMatrixWorld(true);
+
+  const blocked =
+    Math.abs(resolvedX - proposedX) > 0.0005 ||
+    Math.abs(resolvedZ - proposedZ) > 0.0005;
+
+  rememberEditableCollisionSafeState(object);
+
+  if (blocked) {
+    setStatus(
+      (object.userData?.label || '元件') +
+      ' · 已碰到牆面，停止於牆前'
+    );
+  }
+
+  return blocked;
+}
+
+function resolveEditableRotationCollision(object) {
+  if (!object || !wallColliders.length) return false;
+
+  object.updateMatrixWorld(true);
+
+  if (!editableIntersectsWall(object)) {
+    object.userData.lastCollisionSafeRotationY = object.rotation.y;
+    return false;
+  }
+
+  const safeRotation =
+    Number.isFinite(object.userData.lastCollisionSafeRotationY)
+      ? object.userData.lastCollisionSafeRotationY
+      : 0;
+
+  object.rotation.y = safeRotation;
+  object.updateMatrixWorld(true);
+
+  setStatus(
+    (object.userData?.label || '元件') +
+    ' · 旋轉會碰到牆面，已退回安全角度'
+  );
+
+  return true;
 }
 
 function normalizeRadians(angle) {
@@ -2429,6 +2699,7 @@ function selectEditable(object) {
   selectedEditable = object;
 
   if (object) {
+    rememberEditableCollisionSafeState(object);
     transformControls.attach(object);
     setEditableMode(editableMode);
     objectToolbar?.classList.remove('hidden');
@@ -2937,6 +3208,7 @@ function updatePresentationGround(box) {
 }
 
 function clearModel() {
+  wallColliders = [];
   materialTargets.floor.clear();
   materialTargets.roomDoor.clear();
 
@@ -3081,7 +3353,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-nr-f601wx-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261004-wall-collision-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -3127,6 +3399,8 @@ async function tryAutoLoadRepoModel() {
     const correctedW3 = replaceLivingRoomW3(gltf.scene);
     modelRoot.add(gltf.scene);
     modelRoot.add(correctedW3);
+
+    rebuildWallColliders();
 
     const kitchen = restoreOrCreateKitchen();
     const fridge = restoreOrCreateFridge();
