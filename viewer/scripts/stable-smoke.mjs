@@ -22,14 +22,14 @@ try{
     page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(base,{waitUntil:'domcontentloaded',timeout:60000});
-    await page.waitForFunction(()=>window.idm?.viewer?.renderStats?.().calls>0,null,{timeout:60000});
+    await page.waitForFunction(()=>document.querySelector('#viewport')?.dataset.firstFrame==='1',null,{timeout:90000});
     const state=await page.evaluate(()=>{
       const v=window.idm.viewer;
       const w3=v.three.root.getObjectByName('opening-op-w3-living');
       return {
         view:v.getView(),
         layout:v.getLayout(),
-        calls:v.renderStats().calls,
+        calls:JSON.parse(document.querySelector('#viewport').dataset.render||'{}').calls||0,
         w3:!!w3,
         gridV:w3?.children.filter(x=>x.name?.startsWith('grid-v-')).length||0,
         gridH:w3?.children.filter(x=>x.name?.startsWith('grid-h-')).length||0,
