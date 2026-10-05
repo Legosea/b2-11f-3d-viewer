@@ -3808,9 +3808,14 @@ function createHalfWallFlutedGlass() {
   const lowerWallHeight = 1.00;
   const capThickness = 0.035;
   const capDepth = 0.17;
+  const capWidth = length + 0.04;
   const ceilingHeight = 2.60;
   const glassHeight = ceilingHeight - lowerWallHeight - capThickness;
   const glassThickness = 0.018;
+
+  // Glass is intentionally the SAME full width as the timber cap, so the
+  // left/right edges are completely filled with no visible side reveal.
+  const glassWidth = capWidth;
   const totalHeight = ceilingHeight;
 
   const group = new THREE.Group();
@@ -3826,6 +3831,7 @@ function createHalfWallFlutedGlass() {
     depth,
     lowerWallHeight,
     glassHeight,
+    glassWidth,
     totalHeight,
     ceilingHeight
   };
@@ -3875,7 +3881,7 @@ function createHalfWallFlutedGlass() {
 
   const cap = new THREE.Mesh(
     new RoundedBoxGeometry(
-      length + 0.04,
+      capWidth,
       capThickness,
       capDepth,
       4,
@@ -3895,7 +3901,7 @@ function createHalfWallFlutedGlass() {
 
   const glass = new THREE.Mesh(
     new THREE.BoxGeometry(
-      length,
+      glassWidth,
       glassHeight,
       glassThickness
     ),
@@ -3922,7 +3928,7 @@ function createHalfWallFlutedGlass() {
   [-1, 1].forEach((side, idx) => {
     const channel = new THREE.Mesh(sideChannelGeo, channelMat);
     channel.position.set(
-      side * (length / 2 - 0.011),
+      side * (glassWidth / 2 - 0.011),
       lowerWallHeight + capThickness + glassHeight / 2,
       0
     );
@@ -3932,7 +3938,7 @@ function createHalfWallFlutedGlass() {
   });
 
   const topChannel = new THREE.Mesh(
-    new THREE.BoxGeometry(length, 0.022, 0.028),
+    new THREE.BoxGeometry(glassWidth, 0.022, 0.028),
     channelMat
   );
   topChannel.position.set(
@@ -3945,7 +3951,7 @@ function createHalfWallFlutedGlass() {
   group.add(topChannel);
 
   const pickProxy = new THREE.Mesh(
-    new THREE.BoxGeometry(length + 0.04, totalHeight, 0.22),
+    new THREE.BoxGeometry(glassWidth, totalHeight, 0.22),
     new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
@@ -5836,7 +5842,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-100cm-glass-to-ceiling-v6'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-glass-edge-to-edge-v7'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
