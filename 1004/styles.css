@@ -366,11 +366,11 @@ button,input{font:inherit}
 .halfwall-icon:after{
   content:"";position:absolute;
   left:8px;right:8px;top:5px;height:20px;
-  border:1px solid #aaa;
+  border:1px solid rgba(150,160,160,.72);
   background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(210,220,220,.72) 0 3px,
-      rgba(250,255,255,.44) 3px 6px
-    )
+    linear-gradient(135deg,rgba(255,255,255,.88),rgba(205,215,214,.72));
+  box-shadow:
+    inset 0 0 8px rgba(255,255,255,.78),
+    0 1px 2px rgba(70,80,80,.10);
+  filter:saturate(.75)
 }
