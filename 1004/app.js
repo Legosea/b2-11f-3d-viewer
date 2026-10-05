@@ -88,10 +88,19 @@ const COMPONENT_LIBRARY = Object.freeze({
       id: 'living-tv-slat-wall',
       brand: 'Built-in',
       model: '90s Acoustic Slat TV Wall',
-      label: '客廳木格柵電視牆 + 75 吋電視',
-      tvModel: '75-inch 16:9 TV',
-      tvSizeMm: [1668, 942, 25],
+      label: '客廳木格柵電視牆 + LG OLED77G6PTA',
+      tvModel: 'LG OLED77G6PTA',
+      tvSizeMm: [1712, 982, 24.8],
       variants: ['light-oak','walnut','caramel-walnut','shadow-black']
+    },
+    {
+      id: 'living-halfwall-fluted-glass',
+      brand: 'Built-in',
+      model: 'Half Wall + Fluted Glass',
+      label: '半矮牆＋長虹玻璃',
+      sizeMm: [1550, 100, 1935],
+      lowerWallHeightMm: 920,
+      glassHeightMm: 980
     }
   ]
 });
@@ -248,6 +257,16 @@ const TV_WALL_DEFAULT_STATE = Object.freeze({
   variant: 'light-oak'
 });
 
+const HALF_WALL_STORAGE_KEY = 'b2-11f-1004.halfwall-fluted-glass.v1';
+
+const HALF_WALL_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 5.5724,
+  y: 0,
+  z: -3.2091,
+  rotationY: 0
+});
+
 const CENTRO_VARIANTS = Object.freeze({
   'ar8-raster-silver': {
     label: 'AR8 光柵銀',
@@ -368,12 +387,14 @@ const addDaybedBtn = document.getElementById('addDaybedBtn');
 const daybedLidToggleBtn = document.getElementById('daybedLidToggleBtn');
 const addTvWallBtn = document.getElementById('addTvWallBtn');
 const tvWallVariantButtons = [...document.querySelectorAll('[data-tvwall-variant]')];
+const addHalfWallBtn = document.getElementById('addHalfWallBtn');
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
 const woodTextureCache = new Map();
 const surfaceTextureCache = new Map();
 let sofaFabricBumpTexture = null;
+let flutedGlassBumpTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
 let currentFilename = '1004.skp';
@@ -851,7 +872,7 @@ function bindUI() {
     const existing = getCurrentTvWall();
     if (existing) {
       selectEditable(existing);
-      setStatus('木格柵電視牆 + 75 吋電視 已存在 · 已選取');
+      setStatus('木格柵電視牆 + LG OLED77G6PTA 已存在 · 已選取');
       return;
     }
 
@@ -870,7 +891,25 @@ function bindUI() {
     saveTvWallState(tvWall);
     selectEditable(tvWall);
     syncLibraryUI();
-    setStatus('木格柵電視牆 + 75 吋電視 · 已放在圖面中央');
+    setStatus('木格柵電視牆 + LG OLED77G6PTA · 已放在圖面中央');
+  });
+
+  addHalfWallBtn?.addEventListener('click', () => {
+    const existing = getCurrentHalfWall();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('半矮牆＋長虹玻璃 已存在 · 已選取');
+      return;
+    }
+
+    const halfWall = createHalfWallFlutedGlass();
+    applyHalfWallState(halfWall, HALF_WALL_DEFAULT_STATE);
+    editableRoot.add(halfWall);
+    placeNewEditableAtPlanCenter(halfWall, 0);
+    saveHalfWallState(halfWall);
+    selectEditable(halfWall);
+    syncLibraryUI();
+    setStatus('半矮牆＋長虹玻璃 · 已放在圖面中央');
   });
 
   materialPresetButtons.forEach(button => {
@@ -2276,7 +2315,111 @@ function saveEditableState(object) {
     return saveTvWallState(object);
   }
 
+  if (object.userData?.componentId === 'living-halfwall-fluted-glass') {
+    return saveHalfWallState(object);
+  }
+
   return false;
+}
+
+function readHalfWallState() {
+  try {
+    const raw = localStorage.getItem(HALF_WALL_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const center = getPlanCenterXZ();
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : center.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : center.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : 0
+    };
+  } catch (error) {
+    console.warn('Unable to read half-wall state.', error);
+    return null;
+  }
+}
+
+function writeHalfWallState(state) {
+  try {
+    localStorage.setItem(HALF_WALL_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY)
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist half-wall state.', error);
+    return false;
+  }
+}
+
+function saveHalfWallState(halfWall) {
+  if (!halfWall) return false;
+
+  const saved = writeHalfWallState({
+    exists: true,
+    x: halfWall.position.x,
+    y: 0,
+    z: halfWall.position.z,
+    rotationY: halfWall.rotation.y
+  });
+
+  if (saved) halfWall.userData.hasSavedPlacement = true;
+  return saved;
+}
+
+function saveHalfWallDeletedState() {
+  const current = readHalfWallState() || HALF_WALL_DEFAULT_STATE;
+  return writeHalfWallState({ ...current, exists: false });
+}
+
+function getCurrentHalfWall() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'living-halfwall-fluted-glass'
+  ) || null;
+}
+
+function applyHalfWallState(halfWall, state) {
+  const next = state || HALF_WALL_DEFAULT_STATE;
+  halfWall.position.set(next.x, 0, next.z);
+  halfWall.rotation.set(0, next.rotationY, 0);
+  halfWall.userData.floorY = 0;
+  halfWall.userData.hasSavedPlacement = Boolean(state);
+}
+
+function restoreOrCreateHalfWall() {
+  const saved = readHalfWallState();
+  if (saved?.exists === false) return null;
+
+  const halfWall = createHalfWallFlutedGlass();
+
+  if (saved) {
+    applyHalfWallState(halfWall, saved);
+    editableRoot.add(halfWall);
+    halfWall.updateMatrixWorld(true);
+
+    if (editableIntersectsWall(halfWall)) {
+      placeNewEditableAtPlanCenter(halfWall, 0);
+    } else {
+      rememberEditableCollisionSafeState(halfWall);
+    }
+  } else {
+    applyHalfWallState(halfWall, HALF_WALL_DEFAULT_STATE);
+    editableRoot.add(halfWall);
+    placeNewEditableAtPlanCenter(halfWall, 0);
+  }
+
+  saveHalfWallState(halfWall);
+  return halfWall;
 }
 
 function readTvWallState() {
@@ -3620,16 +3763,207 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
-function create75InchTv() {
-  // 75-inch 16:9 planning model.
-  // Active image area is ~1660 x 934 mm; chassis is modelled at 1668 x 942 x 25 mm.
-  const width = 1.668;
-  const height = 0.942;
-  const depth = 0.025;
+function getFlutedGlassBumpTexture() {
+  if (flutedGlassBumpTexture) return flutedGlassBumpTexture;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  const gradient = ctx.createLinearGradient(0, 0, 12, 0);
+  gradient.addColorStop(0.00, '#6f6f6f');
+  gradient.addColorStop(0.22, '#bdbdbd');
+  gradient.addColorStop(0.50, '#f4f4f4');
+  gradient.addColorStop(0.78, '#bdbdbd');
+  gradient.addColorStop(1.00, '#6f6f6f');
+
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let x = 0; x < canvas.width; x += 12) {
+    ctx.save();
+    ctx.translate(x, 0);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 12, canvas.height);
+    ctx.restore();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(5.5, 1);
+  texture.needsUpdate = true;
+  flutedGlassBumpTexture = texture;
+  return texture;
+}
+
+function createHalfWallFlutedGlass() {
+  // Reference-inspired partition:
+  // 92 cm white half-wall + 3.5 cm timber cap + 98 cm fluted glass.
+  const length = 1.55;
+  const depth = 0.10;
+  const lowerWallHeight = 0.92;
+  const capThickness = 0.035;
+  const capDepth = 0.17;
+  const glassHeight = 0.98;
+  const glassThickness = 0.018;
+  const totalHeight = lowerWallHeight + capThickness + glassHeight;
 
   const group = new THREE.Group();
-  group.name = 'TV_75_INCH';
-  group.userData.label = '75 吋電視';
+  group.name = 'Living_HalfWall_FlutedGlass';
+  group.userData.editable = true;
+  group.userData.componentId = 'living-halfwall-fluted-glass';
+  group.userData.label = '半矮牆＋長虹玻璃';
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+  group.userData.forceRoomAngleSnap = true;
+  group.userData.productSize = {
+    length,
+    depth,
+    lowerWallHeight,
+    glassHeight,
+    totalHeight
+  };
+
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0xf1efea,
+    roughness: 0.92,
+    metalness: 0
+  });
+
+  const oakMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.70,
+    metalness: 0,
+    map: getWoodTexture('light-oak', 'roomDoor')
+  });
+
+  const channelMat = new THREE.MeshStandardMaterial({
+    color: 0x99958f,
+    metalness: 0.48,
+    roughness: 0.38
+  });
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xdbe5e5,
+    transparent: true,
+    opacity: 0.42,
+    transmission: 0.18,
+    thickness: 0.012,
+    roughness: 0.20,
+    metalness: 0,
+    side: THREE.DoubleSide,
+    bumpMap: getFlutedGlassBumpTexture(),
+    bumpScale: 0.018,
+    depthWrite: false
+  });
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(length, lowerWallHeight, depth),
+    wallMat
+  );
+  base.position.set(0, lowerWallHeight / 2, 0);
+  base.castShadow = true;
+  base.receiveShadow = true;
+  base.name = 'HalfWall_base';
+  group.add(base);
+
+  const cap = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      length + 0.04,
+      capThickness,
+      capDepth,
+      4,
+      0.006
+    ),
+    oakMat
+  );
+  cap.position.set(
+    0,
+    lowerWallHeight + capThickness / 2,
+    0
+  );
+  cap.castShadow = true;
+  cap.receiveShadow = true;
+  cap.name = 'HalfWall_oak_cap';
+  group.add(cap);
+
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      length - 0.07,
+      glassHeight,
+      glassThickness
+    ),
+    glassMat
+  );
+  glass.position.set(
+    0,
+    lowerWallHeight + capThickness + glassHeight / 2,
+    0
+  );
+  glass.castShadow = false;
+  glass.receiveShadow = true;
+  glass.renderOrder = 3;
+  glass.name = 'HalfWall_fluted_glass';
+  group.add(glass);
+
+  // Fine U-channels at both ends and the top, similar to built-in partitions.
+  const sideChannelGeo = new THREE.BoxGeometry(
+    0.022,
+    glassHeight,
+    0.028
+  );
+
+  [-1, 1].forEach((side, idx) => {
+    const channel = new THREE.Mesh(sideChannelGeo, channelMat);
+    channel.position.set(
+      side * (length - 0.07) / 2,
+      lowerWallHeight + capThickness + glassHeight / 2,
+      0
+    );
+    channel.castShadow = true;
+    channel.name = 'HalfWall_side_channel_' + idx;
+    group.add(channel);
+  });
+
+  const topChannel = new THREE.Mesh(
+    new THREE.BoxGeometry(length - 0.07, 0.022, 0.028),
+    channelMat
+  );
+  topChannel.position.set(
+    0,
+    totalHeight - 0.011,
+    0
+  );
+  topChannel.castShadow = true;
+  topChannel.name = 'HalfWall_top_channel';
+  group.add(topChannel);
+
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(length + 0.04, totalHeight, 0.22),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  pickProxy.position.y = totalHeight / 2;
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  return group;
+}
+
+function createLgOled77G6Pta() {
+  // LG OLED77G6PTA planning dimensions without stand.
+  const width = 1.712;
+  const height = 0.982;
+  const depth = 0.0248;
+
+  const group = new THREE.Group();
+  group.name = 'LG_OLED77G6PTA';
+  group.userData.label = 'LG OLED77G6PTA';
 
   const bodyMat = new THREE.MeshPhysicalMaterial({
     color: 0x101112,
@@ -3692,10 +4026,10 @@ function createLivingTvWall() {
   const slatDepth = 0.035;
 
   const group = new THREE.Group();
-  group.name = 'Living_TV_Slat_Wall_TV_75_INCH';
+  group.name = 'Living_TV_Slat_Wall_LG_OLED77G6PTA';
   group.userData.editable = true;
   group.userData.componentId = 'living-tv-slat-wall';
-  group.userData.label = '木格柵電視牆 + 75 吋電視';
+  group.userData.label = '木格柵電視牆 + LG OLED77G6PTA';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
   // Wall-mounted components must remain square to the room.
@@ -3710,9 +4044,9 @@ function createLivingTvWall() {
   group.userData.productSize = {
     wallWidth,
     wallHeight,
-    tvWidth: 1.668,
-    tvHeight: 0.942,
-    tvDepth: 0.025
+    tvWidth: 1.712,
+    tvHeight: 0.982,
+    tvDepth: 0.0248
   };
 
   const backerMat = new THREE.MeshStandardMaterial({
@@ -3758,10 +4092,10 @@ function createLivingTvWall() {
   }
 
   // LG G6 Gallery Series: zero-gap visual treatment, centered on wall.
-  const tv = create75InchTv();
+  const tv = createLgOled77G6Pta();
   tv.position.set(
     0,
-    1.26,
+    1.28,
     backerDepth / 2 + slatDepth + 0.018
   );
   group.add(tv);
@@ -3829,7 +4163,7 @@ function setTvWallVariantFromLibrary(variantId) {
   setStatus(
     '木格柵電視牆 · ' +
     TV_WALL_VARIANTS[variantId].label +
-    ' · 75 吋電視'
+    ' · LG OLED77G6PTA'
   );
 }
 
@@ -4870,6 +5204,8 @@ function deleteSelectedEditable() {
     saveDaybedDeletedState();
   } else if (componentId === 'living-tv-slat-wall') {
     saveTvWallDeletedState();
+  } else if (componentId === 'living-halfwall-fluted-glass') {
+    saveHalfWallDeletedState();
   }
 
   objectToolbar?.classList.add('hidden');
@@ -5496,7 +5832,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tv-75inch-v4'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-fluted-glass-77tv-v5'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -5551,6 +5887,7 @@ async function tryAutoLoadRepoModel() {
     const sofa = restoreOrCreateSofa();
     const daybed = restoreOrCreateDaybed();
     const tvWall = restoreOrCreateTvWall();
+    const halfWall = restoreOrCreateHalfWall();
     syncLibraryUI();
 
     welcome.classList.add('hidden');
@@ -5562,7 +5899,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + 75 吋電視 已配置'
+      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA + 半矮牆長虹玻璃 已配置'
     );
     fitCamera();
   } catch (error) {
