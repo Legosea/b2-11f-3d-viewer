@@ -6489,7 +6489,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-family-whole-home-v15'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-family-whole-home-v16'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -6552,7 +6552,7 @@ async function tryAutoLoadRepoModel() {
     fitBtn.disabled = false;
     if (exportBtn) exportBtn.disabled = false;
 
-    modeBadge.textContent = '空屋擬真 · 西北向';
+    modeBadge.textContent = '兩大一小 · 全戶配置';
     modelInfo.textContent =
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
