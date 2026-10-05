@@ -34,6 +34,75 @@ const MATERIAL_STORAGE_KEY = 'b2-11f-1004.material-library.v1';
 const LAYOUT_EXPORT_SCHEMA_VERSION = 1;
 const LAYOUT_EXPORT_FILE_PREFIX = 'b2-11f-1004-layout';
 
+// Canonical first-run layout, captured from the user's 2026-10-05 export.
+// Existing browser state is never overwritten; only missing keys are seeded.
+const INITIAL_LAYOUT_SNAPSHOT = Object.freeze({
+  schemaVersion: 1,
+  states: Object.freeze({
+    'b2-11f-1004.panasonic-na-v170rph-k.v2': Object.freeze({
+      exists: true,
+      x: 8.643650793650794,
+      y: 0,
+      z: -1.41,
+      rotationY: -1.5707963267948966,
+      variant: 'black'
+    }),
+    'b2-11f-1004.panasonic-nr-f601wx.v1': Object.freeze({
+      exists: true,
+      x: 7.390000000000001,
+      y: 0,
+      z: -4.64,
+      rotationY: -1.5707963267948966,
+      variant: 'w1-jade-white'
+    }),
+    'b2-11f-1004.cleanup-centro.v1': Object.freeze({
+      exists: true,
+      x: 7.4210714285714285,
+      y: 0,
+      z: -3.0620000000000003,
+      rotationY: -1.5707963267948966,
+      variant: 'ar8-raster-silver',
+      countertop: 'e-coat-stainless',
+      dishwasherInstalled: true
+    }),
+    'b2-11f-1004.ija-reims-3seat.v1': Object.freeze({
+      exists: true,
+      x: 5.54625,
+      y: 0,
+      z: -2.31,
+      rotationY: -1.5707963267948966,
+      widthPreset: '210'
+    }),
+    'b2-11f-1004.w3-window-daybed.v1': Object.freeze({
+      exists: true,
+      x: 4.640000000000001,
+      y: 0,
+      z: -0.97,
+      rotationY: 0,
+      lidsOpen: false
+    }),
+    'b2-11f-1004.living-tv-slat-wall.v2': Object.freeze({
+      exists: true,
+      x: 3.0167407407407407,
+      y: 0,
+      z: -2.3190909090909093,
+      rotationY: 1.5707963267948966,
+      variant: 'light-oak'
+    }),
+    'b2-11f-1004.halfwall-fluted-glass.v1': Object.freeze({
+      exists: true,
+      x: 6.04,
+      y: 0,
+      z: -2.8,
+      rotationY: -1.5707963267948966
+    }),
+    'b2-11f-1004.material-library.v1': Object.freeze({
+      floor: 'natural-oak',
+      roomDoor: 'natural-wood'
+    })
+  })
+});
+
 const COMPONENT_LIBRARY = Object.freeze({
   appliances: [
     {
@@ -432,7 +501,19 @@ bindUI();
 bootstrapViewer();
 
 async function bootstrapViewer() {
+  seedInitialLayoutState();
   await tryAutoLoadRepoModel();
+}
+
+function seedInitialLayoutState() {
+  try {
+    Object.entries(INITIAL_LAYOUT_SNAPSHOT.states).forEach(([key, value]) => {
+      if (localStorage.getItem(key) !== null) return;
+      localStorage.setItem(key, JSON.stringify(value));
+    });
+  } catch (error) {
+    console.warn('Unable to seed initial layout state.', error);
+  }
 }
 
 function getLayoutStorageKeys() {
