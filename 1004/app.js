@@ -209,7 +209,8 @@ const DAYBED_DEFAULT_STATE = Object.freeze({
   lidsOpen: false
 });
 
-const TV_WALL_STORAGE_KEY = 'b2-11f-1004.living-tv-slat-wall.v1';
+const TV_WALL_STORAGE_KEY = 'b2-11f-1004.living-tv-slat-wall.v2';
+const LEGACY_TV_WALL_STORAGE_KEY = 'b2-11f-1004.living-tv-slat-wall.v1';
 
 const TV_WALL_VARIANTS = Object.freeze({
   'light-oak': {
@@ -234,14 +235,16 @@ const TV_WALL_VARIANTS = Object.freeze({
   }
 });
 
-// Actual living-room TV wall is the x≈6.1346 m wall,
-// spanning z≈0 to -1.99 m. The front faces the living room (-X).
+// Safety-first placement policy:
+// newly introduced components start at the centre of the floor plan.
+// These fallback values are the centre of the converted 1004 GLB bounds;
+// runtime placement recalculates the live model centre whenever possible.
 const TV_WALL_DEFAULT_STATE = Object.freeze({
   exists: true,
-  x: 6.125,
+  x: 5.5724,
   y: 0,
-  z: -0.995,
-  rotationY: -Math.PI / 2,
+  z: -3.2091,
+  rotationY: 0,
   variant: 'light-oak'
 });
 
@@ -541,6 +544,66 @@ function resize() {
   renderer.setSize(w, h, false);
 }
 
+function getPlanCenterXZ() {
+  if (modelRoot) {
+    const box = new THREE.Box3().setFromObject(modelRoot);
+    if (!box.isEmpty()) {
+      const center = box.getCenter(new THREE.Vector3());
+      return { x: center.x, z: center.z };
+    }
+  }
+
+  return { x: 5.5724, z: -3.2091 };
+}
+
+function placeNewEditableAtPlanCenter(object, preferredRotationY = 0) {
+  if (!object) return false;
+
+  const center = getPlanCenterXZ();
+  const floor = object.userData?.floorY ?? 0;
+
+  object.position.set(center.x, floor, center.z);
+  object.rotation.set(0, preferredRotationY, 0);
+  object.updateMatrixWorld(true);
+
+  // The exact geometric centre can occasionally coincide with an internal wall.
+  // Search outward from the centre only when necessary, keeping the object as
+  // close to the plan centre as possible.
+  if (wallColliders.length && editableIntersectsWall(object)) {
+    const radii = [0.30, 0.60, 0.90, 1.20, 1.50, 1.80, 2.10];
+    let placed = false;
+
+    for (const radius of radii) {
+      for (let step = 0; step < 16; step++) {
+        const angle = (Math.PI * 2 * step) / 16;
+        object.position.set(
+          center.x + Math.cos(angle) * radius,
+          floor,
+          center.z + Math.sin(angle) * radius
+        );
+        object.updateMatrixWorld(true);
+
+        if (!editableIntersectsWall(object)) {
+          placed = true;
+          break;
+        }
+      }
+      if (placed) break;
+    }
+
+    // If no legal point was found, return to the literal plan centre rather
+    // than using a component-specific wall/balcony default.
+    if (!placed) {
+      object.position.set(center.x, floor, center.z);
+      object.updateMatrixWorld(true);
+    }
+  }
+
+  rememberEditableCollisionSafeState(object);
+  object.userData.defaultPlacementPolicy = 'plan-center';
+  return true;
+}
+
 function bindUI() {
   fileInput?.addEventListener('change', e => pickFile(e.target.files?.[0]));
   welcomeFileInput?.addEventListener('change', e => pickFile(e.target.files?.[0]));
@@ -560,20 +623,20 @@ function bindUI() {
     const saved = readSavedWasherState();
     const washer = createPanasonicWasher();
 
-    // If the object had previously been deleted, explicitly adding it again
-    // restores its last remembered transform instead of losing that placement.
-    if (saved) {
-      applyWasherState(washer, {
-        ...saved,
-        exists: true
-      });
-    } else {
-      placeWasherAtBalcony(washer);
-    }
+    // Preserve product options, but every manual add starts from plan centre.
+    applyWasherState(washer, {
+      ...(saved || WASHER_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    });
 
     editableRoot.add(washer);
+    placeNewEditableAtPlanCenter(washer, 0);
     saveWasherState(washer);
     selectEditable(washer);
+    setStatus('Panasonic NA-V170RPH · 已放在圖面中央');
   });
   moveObjectBtn?.addEventListener('click', () => setEditableMode('translate'));
   rotateObjectBtn?.addEventListener('click', () => setEditableMode('rotate'));
@@ -617,8 +680,15 @@ function bindUI() {
     if (!kitchen) {
       const saved = readKitchenState();
       kitchen = createCentroKitchen();
-      applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+      applyKitchenState(kitchen, {
+        ...(saved || KITCHEN_DEFAULT_STATE),
+        exists: true,
+        x: 0,
+        z: 0,
+        rotationY: 0
+      });
       editableRoot.add(kitchen);
+      placeNewEditableAtPlanCenter(kitchen, 0);
     }
 
     const nextInstalled = !kitchen.userData.dishwasherInstalled;
@@ -643,16 +713,20 @@ function bindUI() {
     const saved = readSavedFridgeState();
     const fridge = createPanasonicFridge();
 
-    if (saved) {
-      applyFridgeState(fridge, { ...saved, exists: true });
-    } else {
-      applyFridgeState(fridge, FRIDGE_DEFAULT_STATE);
-    }
+    applyFridgeState(fridge, {
+      ...(saved || FRIDGE_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    });
 
     editableRoot.add(fridge);
+    placeNewEditableAtPlanCenter(fridge, 0);
     saveFridgeState(fridge);
     selectEditable(fridge);
     syncLibraryUI();
+    setStatus('Panasonic NR-F601WX · 已放在圖面中央');
   });
 
   addKitchenBtn?.addEventListener('click', () => {
@@ -665,12 +739,19 @@ function bindUI() {
 
     const saved = readKitchenState();
     const kitchen = createCentroKitchen();
-    applyKitchenState(kitchen, saved ? { ...saved, exists: true } : KITCHEN_DEFAULT_STATE);
+    applyKitchenState(kitchen, {
+      ...(saved || KITCHEN_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    });
     editableRoot.add(kitchen);
+    placeNewEditableAtPlanCenter(kitchen, 0);
     saveKitchenState(kitchen);
     selectEditable(kitchen);
     syncLibraryUI();
-    setStatus('Cleanup CENTRO 已放回並選取 · 可移動 / 旋轉 / 刪除');
+    setStatus('Cleanup CENTRO · 已放在圖面中央');
   });
 
   sofaWidthButtons.forEach(button => {
@@ -688,13 +769,21 @@ function bindUI() {
     }
 
     const saved = readSofaState();
-    const state = saved ? { ...saved, exists: true } : SOFA_DEFAULT_STATE;
+    const state = {
+      ...(saved || SOFA_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    };
     const sofa = createIjaReimsSofa(state.widthPreset);
     applySofaState(sofa, state);
     editableRoot.add(sofa);
+    placeNewEditableAtPlanCenter(sofa, 0);
     saveSofaState(sofa);
     selectEditable(sofa);
     syncLibraryUI();
+    setStatus('IJA 蘭斯 Reims 三人沙發 · 已放在圖面中央');
   });
 
   addDaybedBtn?.addEventListener('click', () => {
@@ -706,13 +795,21 @@ function bindUI() {
     }
 
     const saved = readDaybedState();
-    const state = saved ? { ...saved, exists: true } : DAYBED_DEFAULT_STATE;
+    const state = {
+      ...(saved || DAYBED_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    };
     const daybed = createW3WindowDaybed();
     applyDaybedState(daybed, state);
     editableRoot.add(daybed);
+    placeNewEditableAtPlanCenter(daybed, 0);
     saveDaybedState(daybed);
     selectEditable(daybed);
     syncLibraryUI();
+    setStatus('W3 三片上掀收納臥榻 · 已放在圖面中央');
   });
 
   daybedLidToggleBtn?.addEventListener('click', () => {
@@ -720,10 +817,17 @@ function bindUI() {
 
     if (!daybed) {
       const saved = readDaybedState();
-      const state = saved ? { ...saved, exists: true } : DAYBED_DEFAULT_STATE;
+      const state = {
+        ...(saved || DAYBED_DEFAULT_STATE),
+        exists: true,
+        x: 0,
+        z: 0,
+        rotationY: 0
+      };
       daybed = createW3WindowDaybed();
       applyDaybedState(daybed, state);
       editableRoot.add(daybed);
+      placeNewEditableAtPlanCenter(daybed, 0);
     }
 
     const nextOpen = !daybed.userData.lidsOpen;
@@ -752,21 +856,21 @@ function bindUI() {
     }
 
     const saved = readTvWallState();
-    const state = saved ? { ...saved, exists: true } : TV_WALL_DEFAULT_STATE;
+    const state = {
+      ...(saved || TV_WALL_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    };
     const tvWall = createLivingTvWall();
     applyTvWallState(tvWall, state);
     editableRoot.add(tvWall);
-    tvWall.updateMatrixWorld(true);
-
-    if (editableIntersectsWall(tvWall)) {
-      applyTvWallState(tvWall, TV_WALL_DEFAULT_STATE);
-      tvWall.updateMatrixWorld(true);
-    }
-
-    rememberEditableCollisionSafeState(tvWall);
+    placeNewEditableAtPlanCenter(tvWall, 0);
     saveTvWallState(tvWall);
     selectEditable(tvWall);
     syncLibraryUI();
+    setStatus('木格柵電視牆 + LG OLED77G6PTA · 已放在圖面中央');
   });
 
   materialPresetButtons.forEach(button => {
@@ -1548,13 +1652,17 @@ function setWasherVariantFromLibrary(variantId) {
     const saved = readSavedWasherState();
     washer = createPanasonicWasher();
 
-    if (saved) {
-      applyWasherState(washer, { ...saved, exists: true, variant: variantId });
-    } else {
-      placeWasherAtBalcony(washer);
-    }
+    applyWasherState(washer, {
+      ...(saved || WASHER_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0,
+      variant: variantId
+    });
 
     editableRoot.add(washer);
+    placeNewEditableAtPlanCenter(washer, 0);
   }
 
   applyWasherVariant(washer, variantId, true);
@@ -2173,24 +2281,43 @@ function saveEditableState(object) {
 
 function readTvWallState() {
   try {
-    const raw = localStorage.getItem(TV_WALL_STORAGE_KEY);
+    let raw = localStorage.getItem(TV_WALL_STORAGE_KEY);
+    let migratedFromLegacy = false;
+
+    if (!raw) {
+      raw = localStorage.getItem(LEGACY_TV_WALL_STORAGE_KEY);
+      migratedFromLegacy = Boolean(raw);
+    }
+
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
 
-    return {
+    const center = getPlanCenterXZ();
+
+    const state = {
       exists: parsed.exists !== false,
-      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : TV_WALL_DEFAULT_STATE.x,
+      x: migratedFromLegacy
+        ? center.x
+        : (Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : center.x),
       y: 0,
-      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : TV_WALL_DEFAULT_STATE.z,
-      rotationY: Number.isFinite(Number(parsed.rotationY))
-        ? Number(parsed.rotationY)
-        : TV_WALL_DEFAULT_STATE.rotationY,
+      z: migratedFromLegacy
+        ? center.z
+        : (Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : center.z),
+      rotationY: migratedFromLegacy
+        ? 0
+        : (Number.isFinite(Number(parsed.rotationY)) ? Number(parsed.rotationY) : 0),
       variant: TV_WALL_VARIANTS[parsed.variant]
         ? parsed.variant
         : TV_WALL_DEFAULT_STATE.variant
     };
+
+    if (migratedFromLegacy) {
+      localStorage.setItem(TV_WALL_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    return state;
   } catch (error) {
     console.warn('Unable to read TV wall state.', error);
     return null;
@@ -2261,17 +2388,24 @@ function restoreOrCreateTvWall() {
   if (saved?.exists === false) return null;
 
   const tvWall = createLivingTvWall();
-  applyTvWallState(tvWall, saved || TV_WALL_DEFAULT_STATE);
-  editableRoot.add(tvWall);
-  tvWall.updateMatrixWorld(true);
 
-  // Migrate any position saved by the earlier loose-collision build.
-  if (editableIntersectsWall(tvWall)) {
-    applyTvWallState(tvWall, TV_WALL_DEFAULT_STATE);
+  if (saved) {
+    applyTvWallState(tvWall, saved);
+    editableRoot.add(tvWall);
     tvWall.updateMatrixWorld(true);
+
+    // Any stale or illegal saved transform is moved to the plan centre.
+    if (editableIntersectsWall(tvWall)) {
+      placeNewEditableAtPlanCenter(tvWall, 0);
+    } else {
+      rememberEditableCollisionSafeState(tvWall);
+    }
+  } else {
+    applyTvWallState(tvWall, TV_WALL_DEFAULT_STATE);
+    editableRoot.add(tvWall);
+    placeNewEditableAtPlanCenter(tvWall, 0);
   }
 
-  rememberEditableCollisionSafeState(tvWall);
   saveTvWallState(tvWall);
   return tvWall;
 }
@@ -3444,8 +3578,15 @@ function setKitchenVariantFromLibrary(variantId) {
   if (!kitchen) {
     const saved = readKitchenState();
     kitchen = createCentroKitchen();
-    applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+    applyKitchenState(kitchen, {
+      ...(saved || KITCHEN_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    });
     editableRoot.add(kitchen);
+    placeNewEditableAtPlanCenter(kitchen, 0);
   }
 
   applyKitchenVariant(kitchen, variantId, true);
@@ -3459,8 +3600,15 @@ function setKitchenCountertopFromLibrary(countertopId) {
   if (!kitchen) {
     const saved = readKitchenState();
     kitchen = createCentroKitchen();
-    applyKitchenState(kitchen, saved || KITCHEN_DEFAULT_STATE);
+    applyKitchenState(kitchen, {
+      ...(saved || KITCHEN_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0
+    });
     editableRoot.add(kitchen);
+    placeNewEditableAtPlanCenter(kitchen, 0);
   }
 
   applyKitchenCountertop(kitchen, countertopId, true);
@@ -3672,6 +3820,7 @@ function setTvWallVariantFromLibrary(variantId) {
     tvWall = createLivingTvWall();
     applyTvWallState(tvWall, state);
     editableRoot.add(tvWall);
+    placeNewEditableAtPlanCenter(tvWall, 0);
   }
 
   applyTvWallVariant(tvWall, variantId, true);
@@ -4249,6 +4398,11 @@ function setSofaWidthFromLibrary(widthPreset) {
   const sofa = createIjaReimsSofa(widthPreset);
   applySofaState(sofa, saved);
   editableRoot.add(sofa);
+
+  if (!current) {
+    placeNewEditableAtPlanCenter(sofa, 0);
+  }
+
   saveSofaState(sofa);
   selectEditable(sofa);
   syncLibraryUI();
@@ -4467,13 +4621,17 @@ function setFridgeVariantFromLibrary(variantId) {
     const saved = readSavedFridgeState();
     fridge = createPanasonicFridge();
 
-    if (saved) {
-      applyFridgeState(fridge, { ...saved, exists: true, variant: variantId });
-    } else {
-      applyFridgeState(fridge, { ...FRIDGE_DEFAULT_STATE, variant: variantId });
-    }
+    applyFridgeState(fridge, {
+      ...(saved || FRIDGE_DEFAULT_STATE),
+      exists: true,
+      x: 0,
+      z: 0,
+      rotationY: 0,
+      variant: variantId
+    });
 
     editableRoot.add(fridge);
+    placeNewEditableAtPlanCenter(fridge, 0);
   }
 
   applyFridgeVariant(fridge, variantId, true);
@@ -5337,7 +5495,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tvwall-memory-snap-collision-v2'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-default-new-components-plan-center-v3'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
