@@ -31,14 +31,8 @@ const ROOM_ANGLE_RELEASE_THRESHOLD = THREE.MathUtils.degToRad(15);
 
 const MATERIAL_STORAGE_KEY = 'b2-11f-1004.material-library.v1';
 
-const GITHUB_LAYOUT = Object.freeze({
-  owner: 'Legosea',
-  repo: 'b2-11f-3d-viewer',
-  branch: 'main',
-  path: '1004/layout.json',
-  rawUrl: 'https://raw.githubusercontent.com/Legosea/b2-11f-3d-viewer/main/1004/layout.json'
-});
-const GITHUB_TOKEN_SESSION_KEY = 'b2-11f-1004.github-write-token';
+const LAYOUT_EXPORT_SCHEMA_VERSION = 1;
+const LAYOUT_EXPORT_FILE_PREFIX = 'b2-11f-1004-layout';
 
 const COMPONENT_LIBRARY = Object.freeze({
   appliances: [
@@ -375,7 +369,9 @@ const moveObjectBtn = document.getElementById('moveObjectBtn');
 const rotateObjectBtn = document.getElementById('rotateObjectBtn');
 const deleteObjectBtn = document.getElementById('deleteObjectBtn');
 const libraryBtn = document.getElementById('libraryBtn');
-const saveGithubBtn = document.getElementById('saveGithubBtn');
+const exportLayoutBtn = document.getElementById('exportLayoutBtn');
+const importLayoutBtn = document.getElementById('importLayoutBtn');
+const layoutImportInput = document.getElementById('layoutImportInput');
 const topViewBtn = document.getElementById('topViewBtn');
 const frontViewBtn = document.getElementById('frontViewBtn');
 const sideViewBtn = document.getElementById('sideViewBtn');
@@ -436,11 +432,10 @@ bindUI();
 bootstrapViewer();
 
 async function bootstrapViewer() {
-  await loadGithubLayoutSnapshot();
   await tryAutoLoadRepoModel();
 }
 
-function getGithubLayoutStorageKeys() {
+function getLayoutStorageKeys() {
   return [
     WASHER_STORAGE_KEY,
     FRIDGE_STORAGE_KEY,
@@ -453,188 +448,108 @@ function getGithubLayoutStorageKeys() {
   ];
 }
 
-function flushEditableStatesForGithub() {
+function flushEditableStatesForLayout() {
   editableRoot?.children?.forEach(object => {
     saveEditableState(object);
   });
 }
 
-function collectGithubLayoutSnapshot() {
-  flushEditableStatesForGithub();
+function collectLayoutSnapshot() {
+  flushEditableStatesForLayout();
 
   const states = {};
-  getGithubLayoutStorageKeys().forEach(key => {
+  getLayoutStorageKeys().forEach(key => {
     const raw = localStorage.getItem(key);
     if (!raw) return;
+
     try {
       states[key] = JSON.parse(raw);
     } catch {
-      // Ignore a corrupted local entry instead of breaking the entire save.
+      // Ignore a corrupted local entry instead of breaking the export.
     }
   });
 
   return {
-    schemaVersion: 1,
-    saved: true,
-    savedAt: new Date().toISOString(),
+    schemaVersion: LAYOUT_EXPORT_SCHEMA_VERSION,
+    app: 'b2-11f-3d-viewer',
+    room: '1004',
+    exportedAt: new Date().toISOString(),
     states
   };
 }
 
-function applyGithubLayoutSnapshot(snapshot) {
-  if (!snapshot?.saved || !snapshot.states || typeof snapshot.states !== 'object') {
-    return false;
+function applyLayoutSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object' || !snapshot.states || typeof snapshot.states !== 'object') {
+    return 0;
   }
 
-  const allowed = new Set(getGithubLayoutStorageKeys());
+  const allowed = new Set(getLayoutStorageKeys());
+  let importedCount = 0;
 
   Object.entries(snapshot.states).forEach(([key, value]) => {
     if (!allowed.has(key) || value == null) return;
     localStorage.setItem(key, JSON.stringify(value));
+    importedCount += 1;
   });
 
-  return true;
+  return importedCount;
 }
 
-async function loadGithubLayoutSnapshot() {
+function buildLayoutExportFilename() {
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace('T', '-');
+
+  return LAYOUT_EXPORT_FILE_PREFIX + '-' + stamp + '.json';
+}
+
+function exportLayoutToFile() {
   try {
-    const response = await fetch(
-      GITHUB_LAYOUT.rawUrl + '?v=' + Date.now(),
-      { cache: 'no-store' }
+    const snapshot = collectLayoutSnapshot();
+    const blob = new Blob(
+      [JSON.stringify(snapshot, null, 2)],
+      { type: 'application/json;charset=utf-8' }
     );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
 
-    if (!response.ok) return false;
+    link.href = url;
+    link.download = buildLayoutExportFilename();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 
-    const snapshot = await response.json();
-    const applied = applyGithubLayoutSnapshot(snapshot);
-
-    if (applied) {
-      setStatus('已從 GitHub 同步元件配置');
-    }
-
-    return applied;
-  } catch (error) {
-    console.warn('GitHub layout sync failed; using local state.', error);
-    return false;
-  }
-}
-
-function utf8ToBase64(text) {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function getGithubLayoutApiUrl() {
-  const path = GITHUB_LAYOUT.path
-    .split('/')
-    .map(encodeURIComponent)
-    .join('/');
-
-  return (
-    'https://api.github.com/repos/' +
-    encodeURIComponent(GITHUB_LAYOUT.owner) + '/' +
-    encodeURIComponent(GITHUB_LAYOUT.repo) +
-    '/contents/' + path
-  );
-}
-
-function getGithubWriteToken() {
-  let token = sessionStorage.getItem(GITHUB_TOKEN_SESSION_KEY);
-
-  if (!token) {
-    token = window.prompt(
-      '第一次儲存到 GitHub 需要 Fine-grained Personal Access Token。\n' +
-      '請只授權 Legosea/b2-11f-3d-viewer，Contents: Read and write。\n' +
-      'Token 只暫存在這個瀏覽器分頁的 sessionStorage，不會寫進專案或 localStorage。'
-    )?.trim();
-
-    if (token) {
-      sessionStorage.setItem(GITHUB_TOKEN_SESSION_KEY, token);
-    }
-  }
-
-  return token || null;
-}
-
-async function saveLayoutToGitHub() {
-  if (!saveGithubBtn) return;
-
-  const oldText = saveGithubBtn.textContent;
-  saveGithubBtn.disabled = true;
-  saveGithubBtn.textContent = '儲存中…';
-
-  try {
-    const token = getGithubWriteToken();
-
-    if (!token) {
-      setStatus('已取消 GitHub 儲存');
-      return;
-    }
-
-    const snapshot = collectGithubLayoutSnapshot();
-    const apiUrl = getGithubLayoutApiUrl();
-    const headers = {
-      Accept: 'application/vnd.github+json',
-      Authorization: 'Bearer ' + token,
-      'X-GitHub-Api-Version': '2022-11-28'
-    };
-
-    let sha = null;
-    const metaResponse = await fetch(
-      apiUrl + '?ref=' + encodeURIComponent(GITHUB_LAYOUT.branch) + '&v=' + Date.now(),
-      { headers, cache: 'no-store' }
-    );
-
-    if (metaResponse.ok) {
-      const meta = await metaResponse.json();
-      sha = meta.sha || null;
-    } else if (metaResponse.status !== 404) {
-      throw new Error('讀取 GitHub layout.json 失敗：HTTP ' + metaResponse.status);
-    }
-
-    const body = {
-      message: 'Save 1004 component layout',
-      content: utf8ToBase64(JSON.stringify(snapshot, null, 2)),
-      branch: GITHUB_LAYOUT.branch
-    };
-
-    if (sha) body.sha = sha;
-
-    const saveResponse = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (saveResponse.status === 401 || saveResponse.status === 403) {
-      sessionStorage.removeItem(GITHUB_TOKEN_SESSION_KEY);
-      throw new Error(
-        'GitHub Token 無效或沒有 Contents: Read and write 權限，請重新按「儲存元件」輸入。'
-      );
-    }
-
-    if (!saveResponse.ok) {
-      const detail = await saveResponse.text();
-      throw new Error(
-        'GitHub 儲存失敗：HTTP ' + saveResponse.status + ' ' + detail.slice(0, 180)
-      );
-    }
-
-    setStatus('元件位置 / 角度 / 配色已儲存到 GitHub · 跨瀏覽器同步');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus('配置已匯出為 JSON · 可在其他瀏覽器直接匯入');
   } catch (error) {
     console.error(error);
-    setStatus(error?.message || 'GitHub 儲存失敗');
-    alert(error?.message || 'GitHub 儲存失敗');
+    setStatus('配置匯出失敗');
+    alert('配置匯出失敗：' + (error?.message || '未知錯誤'));
+  }
+}
+
+async function importLayoutFromFile(file) {
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const snapshot = JSON.parse(text);
+    const importedCount = applyLayoutSnapshot(snapshot);
+
+    if (!importedCount) {
+      throw new Error('檔案內沒有可匯入的 1004 元件配置');
+    }
+
+    setStatus('配置匯入完成 · 正在重新載入場景…');
+    setTimeout(() => window.location.reload(), 120);
+  } catch (error) {
+    console.error(error);
+    setStatus('配置匯入失敗');
+    alert('配置匯入失敗：' + (error?.message || 'JSON 格式不正確'));
   } finally {
-    saveGithubBtn.disabled = false;
-    saveGithubBtn.textContent = oldText;
+    if (layoutImportInput) layoutImportInput.value = '';
   }
 }
 
@@ -878,7 +793,11 @@ function bindUI() {
   deleteObjectBtn?.addEventListener('click', deleteSelectedEditable);
 
   libraryBtn?.addEventListener('click', () => setLibraryOpen(true));
-  saveGithubBtn?.addEventListener('click', saveLayoutToGitHub);
+  exportLayoutBtn?.addEventListener('click', exportLayoutToFile);
+  importLayoutBtn?.addEventListener('click', () => layoutImportInput?.click());
+  layoutImportInput?.addEventListener('change', event => {
+    importLayoutFromFile(event.target.files?.[0]);
+  });
   closeLibraryBtn?.addEventListener('click', () => setLibraryOpen(false));
   libraryBackdrop?.addEventListener('click', () => setLibraryOpen(false));
 
