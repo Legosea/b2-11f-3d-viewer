@@ -103,6 +103,145 @@ const INITIAL_LAYOUT_SNAPSHOT = Object.freeze({
   })
 });
 
+const WHOLE_HOME_DESIGN_REVISION = '20261005-family-2a1c-v1';
+const DESIGN_STORAGE_PREFIX = 'b2-11f-1004.design.';
+const DESIGN_COMPONENT_SPECS = Object.freeze([
+  {
+    id: 'besta-tv-console-180',
+    brand: 'IKEA',
+    model: 'BESTÅ + LAPPVIKEN',
+    label: 'IKEA BESTÅ 電視櫃 180 cm',
+    detail: '染白橡木紋 / LAPPVIKEN · 180 × 42 × 39 cm',
+    type: 'tvConsole',
+    size: [1.80, 0.42, 0.39],
+    x: 3.38, z: -2.3191, rotationY: Math.PI / 2
+  },
+  {
+    id: 'borgeby-coffee-table-70',
+    brand: 'IKEA',
+    model: 'BORGEBY 704.494.02',
+    label: 'IKEA BORGEBY 圓形咖啡桌',
+    detail: '樺木貼皮 · Ø70 × H42 cm · 圓角適合有小孩客廳',
+    type: 'roundTable',
+    size: [0.70, 0.70, 0.42],
+    x: 4.38, z: -2.31, rotationY: 0
+  },
+  {
+    id: 'lohals-rug-133x195',
+    brand: 'IKEA',
+    model: 'LOHALS 505.112.87',
+    label: 'IKEA LOHALS 平織地毯',
+    detail: '天然黃麻 · 133 × 195 cm',
+    type: 'rug',
+    size: [1.95, 1.33, 0.014],
+    x: 4.38, z: -2.31, rotationY: 0
+  },
+  {
+    id: 'norden-teodores-dining-set',
+    brand: 'IKEA',
+    model: 'NORDEN 804.238.83 + TEODORES 703.509.38',
+    label: 'IKEA NORDEN 折疊餐桌＋TEODORES 餐椅',
+    detail: '日常 89 × 80 cm / 展開最長 152 cm · 4 張可堆疊餐椅',
+    type: 'diningSet',
+    size: [0.89, 0.80, 0.80],
+    x: 5.72, z: -4.78, rotationY: 0
+  },
+  {
+    id: 'roborock-saros-10r',
+    brand: 'Roborock',
+    model: 'Saros 10R',
+    label: 'Roborock Saros 10R 掃拖機器人',
+    detail: '機器人 Ø35 cm / 基座約 38.1 × 47.5 × 48.8 cm',
+    type: 'robotVacuum',
+    size: [0.48, 0.95, 0.49],
+    x: 5.35, z: -5.98, rotationY: 0
+  },
+  {
+    id: 'master-cinderella-purple-pearl',
+    brand: '仙杜瑞拉床墊',
+    model: '紫珍珠 標準雙人',
+    label: '主臥 · 仙杜瑞拉 紫珍珠床墊＋低床架',
+    detail: '床墊 152 × 188 cm · 雙人主臥配置',
+    type: 'masterBed',
+    size: [1.62, 1.98, 1.02],
+    x: 10.00, z: -4.28, rotationY: Math.PI / 2
+  },
+  {
+    id: 'nordkisa-bedside-a',
+    brand: 'IKEA',
+    model: 'NORDKISA 404.476.78',
+    label: '主臥 · NORDKISA 床邊桌 A',
+    detail: '竹材 · 40 × 40 × 67 cm',
+    type: 'bedside',
+    size: [0.40, 0.40, 0.67],
+    x: 10.62, z: -5.35, rotationY: 0
+  },
+  {
+    id: 'nordkisa-bedside-b',
+    brand: 'IKEA',
+    model: 'NORDKISA 404.476.78',
+    label: '主臥 · NORDKISA 床邊桌 B',
+    detail: '竹材 · 40 × 40 × 67 cm',
+    type: 'bedside',
+    size: [0.40, 0.40, 0.67],
+    x: 10.62, z: -3.20, rotationY: 0
+  },
+  {
+    id: 'pax-master-wardrobe-150',
+    brand: 'IKEA',
+    model: 'PAX 198.960.27',
+    label: '主臥 · PAX 衣櫃',
+    detail: '染白橡木紋 · 149.6 × 58 × 236.4 cm',
+    type: 'wardrobe',
+    size: [1.496, 0.58, 2.364],
+    x: 8.78, z: -5.98, rotationY: 0
+  },
+  {
+    id: 'malm-child-bed-90',
+    brand: 'IKEA',
+    model: 'MALM 991.322.90',
+    label: '兒童房 · MALM 單人床',
+    detail: '染白橡木貼皮 · 外框 105 × 209 × 100 cm · 90 × 200 cm 床墊',
+    type: 'singleBed',
+    size: [1.05, 2.09, 1.00],
+    x: 0.72, z: -3.55, rotationY: 0
+  },
+  {
+    id: 'micke-child-desk-105',
+    brand: 'IKEA',
+    model: 'MICKE 704.911.32',
+    label: '兒童房 · MICKE 書桌',
+    detail: '染白橡木紋 · 105 × 50 × 75 cm',
+    type: 'desk',
+    size: [1.05, 0.50, 0.75],
+    x: 2.57, z: -4.20, rotationY: Math.PI / 2
+  },
+  {
+    id: 'flintan-child-chair',
+    brand: 'IKEA',
+    model: 'FLINTAN 504.922.03',
+    label: '兒童房 · FLINTAN 工作椅',
+    detail: '米色 · 71 × 71 cm · 高 103–114 cm',
+    type: 'officeChair',
+    size: [0.71, 0.71, 1.08],
+    x: 2.02, z: -4.20, rotationY: -Math.PI / 2
+  },
+  {
+    id: 'pax-child-wardrobe-100',
+    brand: 'IKEA',
+    model: 'PAX 100×58×201',
+    label: '兒童房 · PAX 收納衣櫃',
+    detail: '100 × 58 × 201 cm · 低櫃高版本保留視覺空間',
+    type: 'wardrobe',
+    size: [1.00, 0.58, 2.01],
+    x: 2.53, z: -2.12, rotationY: Math.PI / 2
+  }
+]);
+
+function designStorageKey(id) {
+  return DESIGN_STORAGE_PREFIX + id + '.v1';
+}
+
 const COMPONENT_LIBRARY = Object.freeze({
   appliances: [
     {
@@ -174,7 +313,14 @@ const COMPONENT_LIBRARY = Object.freeze({
       lowerWallHeightMm: 1000,
       glassHeightMm: 1565,
       glassThicknessMm: 8
-    }
+    },
+    ...DESIGN_COMPONENT_SPECS.map(spec => ({
+      id: spec.id,
+      brand: spec.brand,
+      model: spec.model,
+      label: spec.label,
+      sizeMm: spec.size.map(v => Math.round(v * 1000))
+    }))
   ]
 });
 
@@ -506,7 +652,7 @@ async function bootstrapViewer() {
 }
 
 const INITIAL_LAYOUT_REVISION_KEY = 'b2-11f-1004.initial-layout-revision';
-const INITIAL_LAYOUT_REVISION = '20261005-144709Z-v2';
+const INITIAL_LAYOUT_REVISION = '20261005-family-whole-home-v3';
 
 function seedInitialLayoutState() {
   try {
@@ -518,6 +664,15 @@ function seedInitialLayoutState() {
     if (appliedRevision !== INITIAL_LAYOUT_REVISION) {
       Object.entries(INITIAL_LAYOUT_SNAPSHOT.states).forEach(([key, value]) => {
         localStorage.setItem(key, JSON.stringify(value));
+      });
+      DESIGN_COMPONENT_SPECS.forEach(spec => {
+        localStorage.setItem(designStorageKey(spec.id), JSON.stringify({
+          exists: true,
+          x: spec.x,
+          y: 0,
+          z: spec.z,
+          rotationY: spec.rotationY
+        }));
       });
       localStorage.setItem(INITIAL_LAYOUT_REVISION_KEY, INITIAL_LAYOUT_REVISION);
     }
@@ -535,7 +690,8 @@ function getLayoutStorageKeys() {
     DAYBED_STORAGE_KEY,
     TV_WALL_STORAGE_KEY,
     HALF_WALL_STORAGE_KEY,
-    MATERIAL_STORAGE_KEY
+    MATERIAL_STORAGE_KEY,
+    ...DESIGN_COMPONENT_SPECS.map(spec => designStorageKey(spec.id))
   ];
 }
 
@@ -894,6 +1050,12 @@ function bindUI() {
 
   libraryTabButtons.forEach(button => {
     button.addEventListener('click', () => setLibraryTab(button.dataset.libraryTab));
+  });
+
+  document.querySelectorAll('[data-design-component]').forEach(button => {
+    button.addEventListener('click', () => {
+      addOrSelectDesignComponent(button.dataset.designComponent);
+    });
   });
 
   washerVariantButtons.forEach(button => {
@@ -2516,6 +2678,215 @@ function applyRoomAngleMagnet(object, onRelease = false) {
   return false;
 }
 
+function getDesignSpec(id) {
+  return DESIGN_COMPONENT_SPECS.find(spec => spec.id === id) || null;
+}
+
+function addDesignBox(parent, w, h, d, x, y, z, material, name = '') {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  mesh.position.set(x, y, z);
+  mesh.name = name;
+  mesh.castShadow = h > 0.03;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function createDesignChair(parent, x, z, rotationY = 0) {
+  const chair = new THREE.Group();
+  const white = new THREE.MeshStandardMaterial({ color: 0xe8e5df, roughness: 0.72 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x3e4142, metalness: 0.45, roughness: 0.42 });
+  addDesignBox(chair, 0.40, 0.055, 0.37, 0, 0.45, 0, white);
+  addDesignBox(chair, 0.40, 0.34, 0.045, 0, 0.66, 0.16, white);
+  [-0.16,0.16].forEach(px => [-0.14,0.14].forEach(pz => {
+    addDesignBox(chair, 0.028, 0.44, 0.028, px, 0.22, pz, metal);
+  }));
+  chair.position.set(x, 0, z);
+  chair.rotation.y = rotationY;
+  parent.add(chair);
+}
+
+function createDesignComponent(spec) {
+  const group = new THREE.Group();
+  group.name = 'Design_' + spec.id;
+  group.userData.editable = true;
+  group.userData.componentId = spec.id;
+  group.userData.designComponent = true;
+  group.userData.label = spec.label;
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+
+  const oak = new THREE.MeshStandardMaterial({ color: 0xc7a274, roughness: 0.68 });
+  const paleOak = new THREE.MeshStandardMaterial({ color: 0xd7c09c, roughness: 0.72 });
+  const warmWhite = new THREE.MeshStandardMaterial({ color: 0xe9e5dd, roughness: 0.78 });
+  const greige = new THREE.MeshStandardMaterial({ color: 0xb9b2a8, roughness: 0.82 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x282b2c, metalness: 0.22, roughness: 0.50 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x17191a, metalness: 0.18, roughness: 0.42 });
+  const fabric = new THREE.MeshStandardMaterial({ color: 0xd7d0c6, roughness: 0.95 });
+  const mattress = new THREE.MeshStandardMaterial({ color: 0xf3f0ea, roughness: 0.92 });
+  const purple = new THREE.MeshStandardMaterial({ color: 0x6f657d, roughness: 0.88 });
+  const rugMat = new THREE.MeshStandardMaterial({ color: 0xcab99b, roughness: 1.0 });
+
+  const [w,d,h] = spec.size;
+
+  if (spec.type === 'tvConsole') {
+    addDesignBox(group, w, h, d, 0, h/2, 0, paleOak, 'BESTA_body');
+    for (let i=0;i<3;i++) {
+      addDesignBox(group, w/3-0.018, h-0.035, 0.018, -w/3 + i*w/3, h/2, d/2+0.01, warmWhite, 'LAPPVIKEN_front');
+    }
+    addDesignBox(group, w+0.02, 0.025, d+0.02, 0, h+0.0125, 0, oak, 'BESTA_top');
+  } else if (spec.type === 'roundTable') {
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(w/2, w/2, 0.055, 48), paleOak);
+    top.position.y = h;
+    top.castShadow = true; top.receiveShadow = true; group.add(top);
+    const shelf = new THREE.Mesh(new THREE.CylinderGeometry(w*0.40, w*0.40, 0.035, 48), oak);
+    shelf.position.y = 0.16; group.add(shelf);
+    [-0.23,0.23].forEach(px => addDesignBox(group,0.055,h-0.05,0.055,px,(h-0.05)/2,0,oak));
+  } else if (spec.type === 'rug') {
+    const mesh = addDesignBox(group, w, h, d, 0, h/2+0.006, 0, rugMat, 'LOHALS_rug');
+    mesh.castShadow = false;
+  } else if (spec.type === 'diningSet') {
+    addDesignBox(group, 0.89, 0.055, 0.80, 0, 0.74, 0, paleOak, 'NORDEN_top');
+    addDesignBox(group, 0.22, 0.68, 0.58, 0, 0.34, 0, oak, 'NORDEN_center');
+    createDesignChair(group, -0.70, 0, -Math.PI/2);
+    createDesignChair(group, 0.70, 0, Math.PI/2);
+    createDesignChair(group, 0, -0.67, 0);
+    createDesignChair(group, 0, 0.67, Math.PI);
+  } else if (spec.type === 'robotVacuum') {
+    addDesignBox(group, 0.381, 0.488, 0.475, 0, 0.244, 0, warmWhite, 'Saros_dock');
+    addDesignBox(group, 0.30, 0.12, 0.02, 0, 0.30, 0.248, dark, 'Saros_dock_face');
+    const robot = new THREE.Mesh(new THREE.CylinderGeometry(0.175,0.175,0.0798,48), black);
+    robot.position.set(0,0.0399,0.55);
+    robot.castShadow=true; robot.receiveShadow=true; group.add(robot);
+    const sensor = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.012,32), dark);
+    sensor.position.set(0.05,0.086,0.55); group.add(sensor);
+  } else if (spec.type === 'masterBed') {
+    addDesignBox(group, 1.62, 0.24, 1.98, 0, 0.20, 0, paleOak, 'low_bed_frame');
+    addDesignBox(group, 1.52, 0.28, 1.88, 0, 0.46, 0, mattress, 'Cinderella_Purple_Pearl');
+    addDesignBox(group, 1.62, 0.72, 0.09, 0, 0.68, -0.945, greige, 'headboard');
+    addDesignBox(group, 1.52, 0.035, 0.18, 0, 0.61, 0.72, purple, 'purple_pearl_band');
+    addDesignBox(group, 0.58, 0.12, 0.38, -0.38, 0.66, -0.55, fabric, 'pillow');
+    addDesignBox(group, 0.58, 0.12, 0.38, 0.38, 0.66, -0.55, fabric, 'pillow');
+  } else if (spec.type === 'bedside') {
+    addDesignBox(group, w, 0.06, d, 0, h-0.03, 0, oak, 'NORDKISA_top');
+    addDesignBox(group, w-0.05, 0.16, d-0.05, 0, h-0.16, 0, paleOak, 'NORDKISA_drawer');
+    [-0.16,0.16].forEach(px => [-0.16,0.16].forEach(pz => addDesignBox(group,0.035,h-0.18,0.035,px,(h-0.18)/2,pz,oak)));
+  } else if (spec.type === 'wardrobe') {
+    addDesignBox(group, w, h, d, 0, h/2, 0, paleOak, 'PAX_body');
+    const panelCount = w > 1.2 ? 3 : 2;
+    for(let i=1;i<panelCount;i++) addDesignBox(group,0.012,h-0.08,0.018,-w/2+i*w/panelCount,h/2,d/2+0.01,dark,'PAX_seam');
+    for(let i=0;i<panelCount;i++) addDesignBox(group,0.015,0.18,0.025,-w/2+(i+0.5)*w/panelCount,h/2,d/2+0.022,dark,'PAX_handle');
+  } else if (spec.type === 'singleBed') {
+    addDesignBox(group, 1.05, 0.28, 2.09, 0, 0.20, 0, paleOak, 'MALM_frame');
+    addDesignBox(group, 0.90, 0.20, 2.00, 0, 0.43, 0.02, mattress, 'single_mattress');
+    addDesignBox(group, 1.05, 0.72, 0.07, 0, 0.64, -1.01, paleOak, 'MALM_headboard');
+    addDesignBox(group, 0.62, 0.12, 0.38, 0, 0.60, -0.62, fabric, 'pillow');
+  } else if (spec.type === 'desk') {
+    addDesignBox(group, w, 0.045, d, 0, h-0.022, 0, paleOak, 'MICKE_top');
+    addDesignBox(group, 0.045, h-0.06, d, -w/2+0.03, (h-0.06)/2, 0, warmWhite, 'MICKE_side');
+    addDesignBox(group, 0.32, h-0.06, d, w/2-0.16, (h-0.06)/2, 0, warmWhite, 'MICKE_drawers');
+    addDesignBox(group, w-0.36, 0.06, 0.05, -0.15, 0.61, -d/2+0.03, warmWhite, 'MICKE_back');
+  } else if (spec.type === 'officeChair') {
+    const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.27,0.27,0.10,32), greige);
+    seat.scale.z = 0.90; seat.position.y=0.50; group.add(seat);
+    addDesignBox(group,0.46,0.52,0.06,0,0.84,0.20,greige,'FLINTAN_back');
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.42,16),dark);
+    stem.position.y=0.26; group.add(stem);
+    for(let i=0;i<5;i++){
+      const leg=addDesignBox(group,0.035,0.035,0.33,0,0.06,0.13,dark,'FLINTAN_leg');
+      leg.rotation.y=i*Math.PI*2/5;
+    }
+  }
+
+  return group;
+}
+
+function readDesignState(spec) {
+  try {
+    const raw = localStorage.getItem(designStorageKey(spec.id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : spec.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : spec.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY)) ? Number(parsed.rotationY) : spec.rotationY
+    };
+  } catch (error) {
+    console.warn('Unable to read design component state.', spec.id, error);
+    return null;
+  }
+}
+
+function writeDesignState(spec, state) {
+  try {
+    localStorage.setItem(designStorageKey(spec.id), JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x), y: 0, z: Number(state.z), rotationY: Number(state.rotationY)
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to save design component state.', spec.id, error);
+    return false;
+  }
+}
+
+function saveDesignComponentState(object) {
+  const spec = getDesignSpec(object?.userData?.componentId);
+  if (!spec || !object) return false;
+  return writeDesignState(spec, {
+    exists: true,
+    x: object.position.x,
+    y: 0,
+    z: object.position.z,
+    rotationY: object.rotation.y
+  });
+}
+
+function saveDesignComponentDeletedState(id) {
+  const spec = getDesignSpec(id);
+  if (!spec) return false;
+  const current = readDesignState(spec) || spec;
+  return writeDesignState(spec, { ...current, exists: false });
+}
+
+function getCurrentDesignComponent(id) {
+  return editableRoot?.children.find(child => child.userData?.componentId === id) || null;
+}
+
+function restoreOrCreateDesignComponents() {
+  DESIGN_COMPONENT_SPECS.forEach(spec => {
+    const saved = readDesignState(spec);
+    if (saved?.exists === false) return;
+    const state = saved || spec;
+    const object = createDesignComponent(spec);
+    object.position.set(state.x, 0, state.z);
+    object.rotation.set(0, state.rotationY, 0);
+    editableRoot.add(object);
+    rememberEditableCollisionSafeState(object);
+    if (!saved) saveDesignComponentState(object);
+  });
+}
+
+function addOrSelectDesignComponent(id) {
+  const spec = getDesignSpec(id);
+  if (!spec) return;
+  const existing = getCurrentDesignComponent(id);
+  if (existing) {
+    selectEditable(existing);
+    setStatus(spec.label + ' 已存在 · 已選取');
+    return;
+  }
+  const object = createDesignComponent(spec);
+  editableRoot.add(object);
+  placeNewEditableAtPlanCenter(object, 0);
+  saveDesignComponentState(object);
+  selectEditable(object);
+  setStatus(spec.label + ' · 已放在圖面中央');
+}
+
 function saveEditableState(object) {
   if (!object) return false;
 
@@ -2545,6 +2916,10 @@ function saveEditableState(object) {
 
   if (object.userData?.componentId === 'living-halfwall-fluted-glass') {
     return saveHalfWallState(object);
+  }
+
+  if (object.userData?.designComponent) {
+    return saveDesignComponentState(object);
   }
 
   return false;
@@ -5481,6 +5856,8 @@ function deleteSelectedEditable() {
     saveTvWallDeletedState();
   } else if (componentId === 'living-halfwall-fluted-glass') {
     saveHalfWallDeletedState();
+  } else if (doomed.userData?.designComponent) {
+    saveDesignComponentDeletedState(componentId);
   }
 
   objectToolbar?.classList.add('hidden');
@@ -6112,7 +6489,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-matte-glass-github-layout-save-v10'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-family-whole-home-v15'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -6168,6 +6545,7 @@ async function tryAutoLoadRepoModel() {
     const daybed = restoreOrCreateDaybed();
     const tvWall = restoreOrCreateTvWall();
     const halfWall = restoreOrCreateHalfWall();
+    restoreOrCreateDesignComponents();
     syncLibraryUI();
 
     welcome.classList.add('hidden');
@@ -6179,7 +6557,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA + 半矮牆磨砂防爆玻璃 已配置'
+      '1004 · 兩大一小全戶配置 · 客餐廳 / 主臥 / 兒童房 / 智慧清潔 已完成'
     );
     fitCamera();
   } catch (error) {
