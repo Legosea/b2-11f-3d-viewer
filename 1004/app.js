@@ -80,7 +80,7 @@ const COMPONENT_LIBRARY = Object.freeze({
       brand: 'Built-in',
       model: 'W3 Window Daybed',
       label: 'W3 窗邊木作臥榻板',
-      widthMm: 2702,
+      widthMm: 2720,
       depthMm: 620,
       heightMm: 45
     }
@@ -3264,9 +3264,10 @@ function setKitchenCountertopFromLibrary(countertopId) {
 }
 
 function createW3WindowDaybed() {
-  // W3 clear span: x=3.202m to x=5.904m => 2.702m wall-to-wall.
-  // Built-in storage daybed with THREE independent top-hinged lids.
-  const width = 2.702;
+  // W3 clear span is ~2.702 m. For true built-in millwork appearance,
+  // extend the carcass 9 mm into each side wall so there is no visible
+  // furniture-style gap at either end.
+  const width = 2.720;
   const depth = 0.62;
   const topHeight = 0.44;
   const lidThickness = 0.040;
@@ -3281,7 +3282,7 @@ function createW3WindowDaybed() {
   group.userData.label = 'W3 窗邊三片上掀收納臥榻';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
-  group.userData.wallClearance = -0.002;
+  group.userData.wallClearance = -0.012;
   group.userData.lidsOpen = false;
   group.userData.productSize = {
     width,
@@ -4907,7 +4908,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-three-lift-storage-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-daybed-wall-tight-v4'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
