@@ -505,12 +505,22 @@ async function bootstrapViewer() {
   await tryAutoLoadRepoModel();
 }
 
+const INITIAL_LAYOUT_REVISION_KEY = 'b2-11f-1004.initial-layout-revision';
+const INITIAL_LAYOUT_REVISION = '20261005-144709Z-v2';
+
 function seedInitialLayoutState() {
   try {
-    Object.entries(INITIAL_LAYOUT_SNAPSHOT.states).forEach(([key, value]) => {
-      if (localStorage.getItem(key) !== null) return;
-      localStorage.setItem(key, JSON.stringify(value));
-    });
+    const appliedRevision = localStorage.getItem(INITIAL_LAYOUT_REVISION_KEY);
+
+    // v13 only filled missing keys, so browsers that had visited an older build
+    // kept stale placements. Apply this canonical snapshot once to every browser,
+    // then leave all later user edits untouched.
+    if (appliedRevision !== INITIAL_LAYOUT_REVISION) {
+      Object.entries(INITIAL_LAYOUT_SNAPSHOT.states).forEach(([key, value]) => {
+        localStorage.setItem(key, JSON.stringify(value));
+      });
+      localStorage.setItem(INITIAL_LAYOUT_REVISION_KEY, INITIAL_LAYOUT_REVISION);
+    }
   } catch (error) {
     console.warn('Unable to seed initial layout state.', error);
   }
