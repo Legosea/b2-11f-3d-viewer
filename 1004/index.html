@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#f6f3ed" />
   <title>1004 Empty Interior · Three.js</title>
-  <link rel="stylesheet" href="./styles.css?v=20261005-photoreal-material-pass-frosted8mm-v8" />
+  <link rel="stylesheet" href="./styles.css?v=20261005-frosted-glass-stable-render-v9" />
   <script type="importmap">
     {
       "imports": {
@@ -281,7 +281,7 @@
             </div>
 
             <p class="catalog-note">
-              下半部白色矮牆高 100 cm，上方改為 8mm 磨砂防爆玻璃，由木檯面一路頂到 260 cm 天花板；玻璃左右延伸到與木檯面同寬，兩側完全補滿、不留側縫。玻璃採實際 8mm 厚度與霧面透光材質，不使用示意紋理。中間木作檯面採淺橡木。新增時先放在圖面中央，支援位置記憶、90° 旋轉磁吸與牆面碰撞停止。
+              下半部白色矮牆高 100 cm，上方改為 8mm 磨砂防爆玻璃，由木檯面一路頂到 260 cm 天花板；玻璃左右延伸到與木檯面同寬，兩側完全補滿、不留側縫。玻璃採實際 8mm 厚度與 PBR 霧面透光材質，並改用穩定的 roughness/transmission 渲染，避免旋轉視角時閃爍破圖。中間木作檯面採淺橡木。新增時先放在圖面中央，支援位置記憶、90° 旋轉磁吸與牆面碰撞停止。
             </p>
 
             <button id="addHalfWallBtn" class="button primary catalog-action">放置 / 選取</button>
@@ -351,6 +351,6 @@
     </footer>
   </div>
 
-  <script type="module" src="./app.js?v=20261005-photoreal-material-pass-frosted8mm-v8"></script>
+  <script type="module" src="./app.js?v=20261005-frosted-glass-stable-render-v9"></script>
 </body>
 </html>
