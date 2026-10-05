@@ -80,7 +80,7 @@ const COMPONENT_LIBRARY = Object.freeze({
       brand: 'Built-in',
       model: 'W3 Window Daybed',
       label: 'W3 窗邊木作臥榻板',
-      widthMm: 2720,
+      widthMm: 2868,
       depthMm: 620,
       heightMm: 45
     }
@@ -193,7 +193,7 @@ const DAYBED_STORAGE_KEY = 'b2-11f-1004.w3-window-daybed.v1';
 
 const DAYBED_DEFAULT_STATE = Object.freeze({
   exists: true,
-  x: 4.553215,
+  x: 4.5524,
   y: 0,
   z: -0.945,
   rotationY: 0,
@@ -3264,10 +3264,13 @@ function setKitchenCountertopFromLibrary(countertopId) {
 }
 
 function createW3WindowDaybed() {
-  // W3 clear span is ~2.702 m. For true built-in millwork appearance,
-  // extend the carcass 9 mm into each side wall so there is no visible
-  // furniture-style gap at either end.
-  const width = 2.720;
+  // Actual W3 niche side-wall faces measured from the GLB:
+  // left interior face  x ~= 3.1195 m
+  // right interior face x ~= 5.9853 m
+  // clear wall-to-wall span ~= 2.8658 m.
+  // Use 2.868 m so the custom millwork scribes a fraction into both walls
+  // and leaves no visible light gap.
+  const width = 2.868;
   const depth = 0.62;
   const topHeight = 0.44;
   const lidThickness = 0.040;
@@ -3282,7 +3285,7 @@ function createW3WindowDaybed() {
   group.userData.label = 'W3 窗邊三片上掀收納臥榻';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
-  group.userData.wallClearance = -0.012;
+  group.userData.wallClearance = -0.018;
   group.userData.lidsOpen = false;
   group.userData.productSize = {
     width,
@@ -4908,7 +4911,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-daybed-wall-tight-v4'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-daybed-true-wall-span-v5'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
