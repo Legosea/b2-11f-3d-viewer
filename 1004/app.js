@@ -96,11 +96,12 @@ const COMPONENT_LIBRARY = Object.freeze({
     {
       id: 'living-halfwall-fluted-glass',
       brand: 'Built-in',
-      model: 'Half Wall + Fluted Glass',
-      label: '半矮牆＋長虹玻璃',
+      model: 'Half Wall + 8mm Frosted Safety Glass',
+      label: '半矮牆＋8mm磨砂防爆玻璃',
       sizeMm: [1550, 100, 2600],
       lowerWallHeightMm: 1000,
-      glassHeightMm: 1565
+      glassHeightMm: 1565,
+      glassThicknessMm: 8
     }
   ]
 });
@@ -394,7 +395,7 @@ let nordicWoodTexture = null;
 const woodTextureCache = new Map();
 const surfaceTextureCache = new Map();
 let sofaFabricBumpTexture = null;
-let flutedGlassBumpTexture = null;
+let frostedGlassMicroTexture = null;
 let currentSceneData = null;
 let currentGlbBytes = null;
 let currentFilename = '1004.skp';
@@ -898,18 +899,18 @@ function bindUI() {
     const existing = getCurrentHalfWall();
     if (existing) {
       selectEditable(existing);
-      setStatus('半矮牆＋長虹玻璃 已存在 · 已選取');
+      setStatus('半矮牆＋8mm磨砂防爆玻璃 已存在 · 已選取');
       return;
     }
 
-    const halfWall = createHalfWallFlutedGlass();
+    const halfWall = createHalfWallFrostedSafetyGlass();
     applyHalfWallState(halfWall, HALF_WALL_DEFAULT_STATE);
     editableRoot.add(halfWall);
     placeNewEditableAtPlanCenter(halfWall, 0);
     saveHalfWallState(halfWall);
     selectEditable(halfWall);
     syncLibraryUI();
-    setStatus('半矮牆＋長虹玻璃 · 已放在圖面中央');
+    setStatus('半矮牆＋8mm磨砂防爆玻璃 · 已放在圖面中央');
   });
 
   materialPresetButtons.forEach(button => {
@@ -1373,10 +1374,13 @@ function stylePhotorealMaterial(material, mesh) {
   if (name.includes('railing glass') || name.includes('玻璃 窗戶') || name.includes('translucent')) {
     setColor(0xc7d2d1);
     material.transparent = true;
-    material.opacity = name.includes('railing') ? 0.32 : 0.24;
-    material.roughness = 0.18;
+    material.opacity = name.includes('railing') ? 0.48 : 0.42;
+    material.roughness = 0.12;
     material.metalness = 0;
     material.depthWrite = false;
+    if ('transmission' in material) material.transmission = 0.72;
+    if ('ior' in material) material.ior = 1.52;
+    if ('thickness' in material) material.thickness = name.includes('railing') ? 0.010 : 0.006;
   } else if (name.includes('glass railing color')) {
     setColor(0x596361);
     material.roughness = 0.42;
@@ -2400,7 +2404,7 @@ function restoreOrCreateHalfWall() {
   const saved = readHalfWallState();
   if (saved?.exists === false) return null;
 
-  const halfWall = createHalfWallFlutedGlass();
+  const halfWall = createHalfWallFrostedSafetyGlass();
 
   if (saved) {
     applyHalfWallState(halfWall, saved);
@@ -2864,22 +2868,30 @@ function createCentroKitchen() {
   assembly.position.set(-width / 2, 0, -depth / 2);
   group.add(assembly);
 
-  const cabinetMat = new THREE.MeshStandardMaterial({
+  const cabinetMat = new THREE.MeshPhysicalMaterial({
     color: 0xaeb2b4,
     metalness: 0.42,
-    roughness: 0.40
+    roughness: 0.38,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.50
   });
 
-  const counterMat = new THREE.MeshStandardMaterial({
+  const counterMat = new THREE.MeshPhysicalMaterial({
     color: 0xb6bbbd,
-    metalness: 0.72,
-    roughness: 0.30
+    metalness: 0.78,
+    roughness: 0.27,
+    anisotropy: 0.32,
+    clearcoat: 0.04,
+    clearcoatRoughness: 0.42
   });
 
-  const stainlessMat = new THREE.MeshStandardMaterial({
+  const stainlessMat = new THREE.MeshPhysicalMaterial({
     color: 0xa8afb2,
-    metalness: 0.78,
-    roughness: 0.28
+    metalness: 0.88,
+    roughness: 0.24,
+    anisotropy: 0.52,
+    clearcoat: 0.03,
+    clearcoatRoughness: 0.38
   });
 
   const darkMat = new THREE.MeshStandardMaterial({
@@ -3010,16 +3022,20 @@ function createCentroKitchen() {
   const dishwasherBottom = 0.018;
   const dishwasherFrontZ = depth + 0.014;
 
-  const dishwasherBodyMat = new THREE.MeshStandardMaterial({
+  const dishwasherBodyMat = new THREE.MeshPhysicalMaterial({
     color: 0x4f5355,
-    metalness: 0.50,
-    roughness: 0.42
+    metalness: 0.58,
+    roughness: 0.38,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.44
   });
 
-  const dishwasherControlMat = new THREE.MeshStandardMaterial({
+  const dishwasherControlMat = new THREE.MeshPhysicalMaterial({
     color: 0x5b5a57,
-    metalness: 0.32,
-    roughness: 0.46
+    metalness: 0.38,
+    roughness: 0.40,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.35
   });
 
   // The actual machine body is mostly hidden behind the cabinet door.
@@ -3763,42 +3779,50 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
-function getFlutedGlassBumpTexture() {
-  if (flutedGlassBumpTexture) return flutedGlassBumpTexture;
+function getFrostedGlassMicroTexture() {
+  if (frostedGlassMicroTexture) return frostedGlassMicroTexture;
 
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 256;
   const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(canvas.width, canvas.height);
+  const random = seededRandom(hashString('8mm-frosted-safety-glass'));
 
-  const gradient = ctx.createLinearGradient(0, 0, 12, 0);
-  gradient.addColorStop(0.00, '#6f6f6f');
-  gradient.addColorStop(0.22, '#bdbdbd');
-  gradient.addColorStop(0.50, '#f4f4f4');
-  gradient.addColorStop(0.78, '#bdbdbd');
-  gradient.addColorStop(1.00, '#6f6f6f');
-
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  for (let x = 0; x < canvas.width; x += 12) {
-    ctx.save();
-    ctx.translate(x, 0);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 12, canvas.height);
-    ctx.restore();
+  for (let i = 0; i < image.data.length; i += 4) {
+    // Very fine etched / sandblasted micro-surface variation.
+    const n = 112 + Math.floor(random() * 32);
+    image.data[i] = n;
+    image.data[i + 1] = n;
+    image.data[i + 2] = n;
+    image.data[i + 3] = 255;
   }
+
+  ctx.putImageData(image, 0, 0);
+
+  // Add a second, softer scale so the surface does not look like digital noise.
+  ctx.globalAlpha = 0.14;
+  for (let i = 0; i < 420; i++) {
+    const v = 118 + Math.floor(random() * 42);
+    ctx.fillStyle = `rgb(${v},${v},${v})`;
+    const r = 0.6 + random() * 2.2;
+    ctx.beginPath();
+    ctx.arc(random() * 256, random() * 256, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(5.5, 1);
+  texture.repeat.set(3.2, 3.2);
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   texture.needsUpdate = true;
-  flutedGlassBumpTexture = texture;
+  frostedGlassMicroTexture = texture;
   return texture;
 }
 
-function createHalfWallFlutedGlass() {
+function createHalfWallFrostedSafetyGlass() {
   // Updated built-in partition:
   // 100 cm white half-wall + 3.5 cm timber cap, with fluted glass continuing
   // all the way to the apartment ceiling (2.60 m). The glass spans the full
@@ -3811,7 +3835,7 @@ function createHalfWallFlutedGlass() {
   const capWidth = length + 0.04;
   const ceilingHeight = 2.60;
   const glassHeight = ceilingHeight - lowerWallHeight - capThickness;
-  const glassThickness = 0.018;
+  const glassThickness = 0.008;
 
   // Glass is intentionally the SAME full width as the timber cap, so the
   // left/right edges are completely filled with no visible side reveal.
@@ -3819,10 +3843,10 @@ function createHalfWallFlutedGlass() {
   const totalHeight = ceilingHeight;
 
   const group = new THREE.Group();
-  group.name = 'Living_HalfWall_FlutedGlass';
+  group.name = 'Living_HalfWall_FrostedSafetyGlass_8mm';
   group.userData.editable = true;
   group.userData.componentId = 'living-halfwall-fluted-glass';
-  group.userData.label = '半矮牆＋長虹玻璃';
+  group.userData.label = '半矮牆＋8mm磨砂防爆玻璃';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
   group.userData.forceRoomAngleSnap = true;
@@ -3842,10 +3866,12 @@ function createHalfWallFlutedGlass() {
     metalness: 0
   });
 
-  const oakMat = new THREE.MeshStandardMaterial({
+  const oakMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
-    roughness: 0.70,
+    roughness: 0.62,
     metalness: 0,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.48,
     map: getWoodTexture('light-oak', 'roomDoor')
   });
 
@@ -3856,16 +3882,22 @@ function createHalfWallFlutedGlass() {
   });
 
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0xdbe5e5,
+    // Neutral low-iron safety glass with a realistic frosted surface.
+    color: 0xeaf0ef,
     transparent: true,
-    opacity: 0.42,
-    transmission: 0.18,
-    thickness: 0.012,
-    roughness: 0.20,
+    opacity: 0.92,
+    transmission: 0.58,
+    thickness: glassThickness,
+    roughness: 0.48,
     metalness: 0,
+    ior: 1.52,
+    attenuationColor: new THREE.Color(0xe4efec),
+    attenuationDistance: 0.55,
+    clearcoat: 0.10,
+    clearcoatRoughness: 0.32,
     side: THREE.DoubleSide,
-    bumpMap: getFlutedGlassBumpTexture(),
-    bumpScale: 0.018,
+    bumpMap: getFrostedGlassMicroTexture(),
+    bumpScale: 0.0025,
     depthWrite: false
   });
 
@@ -3915,20 +3947,20 @@ function createHalfWallFlutedGlass() {
   glass.castShadow = false;
   glass.receiveShadow = true;
   glass.renderOrder = 3;
-  glass.name = 'HalfWall_fluted_glass';
+  glass.name = 'HalfWall_frosted_safety_glass_8mm';
   group.add(glass);
 
   // Fine U-channels at both ends and the top, similar to built-in partitions.
   const sideChannelGeo = new THREE.BoxGeometry(
-    0.022,
+    0.016,
     glassHeight,
-    0.028
+    0.014
   );
 
   [-1, 1].forEach((side, idx) => {
     const channel = new THREE.Mesh(sideChannelGeo, channelMat);
     channel.position.set(
-      side * (glassWidth / 2 - 0.011),
+      side * (glassWidth / 2 - 0.008),
       lowerWallHeight + capThickness + glassHeight / 2,
       0
     );
@@ -3938,12 +3970,12 @@ function createHalfWallFlutedGlass() {
   });
 
   const topChannel = new THREE.Mesh(
-    new THREE.BoxGeometry(glassWidth, 0.022, 0.028),
+    new THREE.BoxGeometry(glassWidth, 0.016, 0.014),
     channelMat
   );
   topChannel.position.set(
     0,
-    totalHeight - 0.011,
+    totalHeight - 0.008,
     0
   );
   topChannel.castShadow = true;
@@ -4781,8 +4813,9 @@ function createPanasonicFridge() {
     color: 0xf0efeb,
     metalness: 0.10,
     roughness: 0.22,
-    clearcoat: 0.34,
-    clearcoatRoughness: 0.16
+    clearcoat: 0.52,
+    clearcoatRoughness: 0.12,
+    reflectivity: 0.58
   });
 
   // Light, subtle seams — no heavy black framework.
@@ -5027,13 +5060,18 @@ function createPanasonicWasher() {
     roughness: 0.24
   });
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x35464d,
+    color: 0x2d3b41,
     transparent: true,
-    opacity: 0.74,
-    roughness: 0.08,
+    opacity: 0.82,
+    roughness: 0.06,
     metalness: 0,
-    transmission: 0.28,
-    thickness: 0.018
+    transmission: 0.38,
+    thickness: 0.018,
+    ior: 1.52,
+    clearcoat: 0.28,
+    clearcoatRoughness: 0.10,
+    attenuationColor: new THREE.Color(0x5d7177),
+    attenuationDistance: 0.20
   });
 
   const body = new THREE.Mesh(
@@ -5316,12 +5354,17 @@ function replaceLivingRoomW3(root) {
     roughness: 0.24
   });
 
-  const glassMat = new THREE.MeshStandardMaterial({
-    color: 0xaebfc2,
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xdde7e7,
     transparent: true,
-    opacity: 0.34,
+    opacity: 0.72,
+    transmission: 0.72,
     roughness: 0.08,
     metalness: 0,
+    ior: 1.52,
+    thickness: 0.006,
+    attenuationColor: new THREE.Color(0xe8f0ee),
+    attenuationDistance: 1.2,
     depthWrite: false,
     side: THREE.DoubleSide
   });
@@ -5842,7 +5885,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-glass-edge-to-edge-v7'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-photoreal-material-pass-frosted8mm-v8'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
