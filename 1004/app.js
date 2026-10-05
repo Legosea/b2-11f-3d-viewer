@@ -756,6 +756,14 @@ function bindUI() {
     const tvWall = createLivingTvWall();
     applyTvWallState(tvWall, state);
     editableRoot.add(tvWall);
+    tvWall.updateMatrixWorld(true);
+
+    if (editableIntersectsWall(tvWall)) {
+      applyTvWallState(tvWall, TV_WALL_DEFAULT_STATE);
+      tvWall.updateMatrixWorld(true);
+    }
+
+    rememberEditableCollisionSafeState(tvWall);
     saveTvWallState(tvWall);
     selectEditable(tvWall);
     syncLibraryUI();
@@ -2116,6 +2124,13 @@ function applyRoomAngleMagnet(object, onRelease = false) {
     ? ROOM_ANGLE_RELEASE_THRESHOLD
     : ROOM_ANGLE_MAGNET_THRESHOLD;
 
+  // Built-in wall panels should never finish at a crooked angle.
+  if (onRelease && object.userData?.forceRoomAngleSnap) {
+    object.rotation.y = nearest;
+    object.userData.angleSnapped = true;
+    return true;
+  }
+
   if (getAngularDistance(current, nearest) <= threshold) {
     object.rotation.y = nearest;
     object.userData.angleSnapped = true;
@@ -2248,8 +2263,16 @@ function restoreOrCreateTvWall() {
   const tvWall = createLivingTvWall();
   applyTvWallState(tvWall, saved || TV_WALL_DEFAULT_STATE);
   editableRoot.add(tvWall);
+  tvWall.updateMatrixWorld(true);
 
-  if (!saved) saveTvWallState(tvWall);
+  // Migrate any position saved by the earlier loose-collision build.
+  if (editableIntersectsWall(tvWall)) {
+    applyTvWallState(tvWall, TV_WALL_DEFAULT_STATE);
+    tvWall.updateMatrixWorld(true);
+  }
+
+  rememberEditableCollisionSafeState(tvWall);
+  saveTvWallState(tvWall);
   return tvWall;
 }
 
@@ -3526,9 +3549,14 @@ function createLivingTvWall() {
   group.userData.label = '木格柵電視牆 + LG OLED77G6PTA';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
-  // It is intentionally wall-mounted, so shrink the generic wall-collision
-  // envelope enough to allow the panel to sit flush against the wall plane.
-  group.userData.wallClearance = -0.060;
+  // Wall-mounted components must remain square to the room.
+  // While dragging they magnetise near 90-degree axes; on release they always
+  // finish exactly at 0 / 90 / 180 / 270 degrees.
+  group.userData.forceRoomAngleSnap = true;
+
+  // Keep only a hairline tolerance so the backer can sit flush to a wall
+  // without allowing the complete panel to pass through wall geometry.
+  group.userData.wallClearance = 0.00025;
   group.userData.variant = TV_WALL_DEFAULT_STATE.variant;
   group.userData.productSize = {
     wallWidth,
@@ -4649,7 +4677,11 @@ function selectEditable(object) {
     transformControls.attach(object);
     setEditableMode(editableMode);
     objectToolbar?.classList.remove('hidden');
-    setStatus((object.userData.label || '元件') + ' · 可移動 / 旋轉磁吸 / 刪除');
+    const behaviorText =
+      object.userData?.componentId === 'living-tv-slat-wall'
+        ? ' · 位置記憶 / 90° 旋轉磁吸 / 牆面碰撞停止 / 刪除'
+        : ' · 可移動 / 旋轉磁吸 / 刪除';
+    setStatus((object.userData.label || '元件') + behaviorText);
   } else {
     transformControls.detach();
     objectToolbar?.classList.add('hidden');
@@ -5305,7 +5337,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tvwall-lg-oled77g6pta-v1'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tvwall-memory-snap-collision-v2'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
