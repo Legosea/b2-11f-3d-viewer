@@ -88,9 +88,9 @@ const COMPONENT_LIBRARY = Object.freeze({
       id: 'living-tv-slat-wall',
       brand: 'Built-in',
       model: '90s Acoustic Slat TV Wall',
-      label: '客廳木格柵電視牆 + LG OLED77G6PTA',
-      tvModel: 'LG OLED77G6PTA',
-      tvSizeMm: [1712, 982, 24.8],
+      label: '客廳木格柵電視牆 + 75 吋電視',
+      tvModel: '75-inch 16:9 TV',
+      tvSizeMm: [1668, 942, 25],
       variants: ['light-oak','walnut','caramel-walnut','shadow-black']
     }
   ]
@@ -851,7 +851,7 @@ function bindUI() {
     const existing = getCurrentTvWall();
     if (existing) {
       selectEditable(existing);
-      setStatus('木格柵電視牆 + LG OLED77G6PTA 已存在 · 已選取');
+      setStatus('木格柵電視牆 + 75 吋電視 已存在 · 已選取');
       return;
     }
 
@@ -870,7 +870,7 @@ function bindUI() {
     saveTvWallState(tvWall);
     selectEditable(tvWall);
     syncLibraryUI();
-    setStatus('木格柵電視牆 + LG OLED77G6PTA · 已放在圖面中央');
+    setStatus('木格柵電視牆 + 75 吋電視 · 已放在圖面中央');
   });
 
   materialPresetButtons.forEach(button => {
@@ -3620,15 +3620,16 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
-function createLgOled77G6Pta() {
-  // LG official dimensions without stand: 1712 x 982 x 24.8 mm.
-  const width = 1.712;
-  const height = 0.982;
-  const depth = 0.0248;
+function create75InchTv() {
+  // 75-inch 16:9 planning model.
+  // Active image area is ~1660 x 934 mm; chassis is modelled at 1668 x 942 x 25 mm.
+  const width = 1.668;
+  const height = 0.942;
+  const depth = 0.025;
 
   const group = new THREE.Group();
-  group.name = 'LG_OLED77G6PTA';
-  group.userData.label = 'LG OLED77G6PTA';
+  group.name = 'TV_75_INCH';
+  group.userData.label = '75 吋電視';
 
   const bodyMat = new THREE.MeshPhysicalMaterial({
     color: 0x101112,
@@ -3691,10 +3692,10 @@ function createLivingTvWall() {
   const slatDepth = 0.035;
 
   const group = new THREE.Group();
-  group.name = 'Living_TV_Slat_Wall_LG_OLED77G6PTA';
+  group.name = 'Living_TV_Slat_Wall_TV_75_INCH';
   group.userData.editable = true;
   group.userData.componentId = 'living-tv-slat-wall';
-  group.userData.label = '木格柵電視牆 + LG OLED77G6PTA';
+  group.userData.label = '木格柵電視牆 + 75 吋電視';
   group.userData.floorY = 0;
   group.userData.snapAngleOffset = 0;
   // Wall-mounted components must remain square to the room.
@@ -3709,9 +3710,9 @@ function createLivingTvWall() {
   group.userData.productSize = {
     wallWidth,
     wallHeight,
-    tvWidth: 1.712,
-    tvHeight: 0.982,
-    tvDepth: 0.0248
+    tvWidth: 1.668,
+    tvHeight: 0.942,
+    tvDepth: 0.025
   };
 
   const backerMat = new THREE.MeshStandardMaterial({
@@ -3757,10 +3758,10 @@ function createLivingTvWall() {
   }
 
   // LG G6 Gallery Series: zero-gap visual treatment, centered on wall.
-  const tv = createLgOled77G6Pta();
+  const tv = create75InchTv();
   tv.position.set(
     0,
-    1.28,
+    1.26,
     backerDepth / 2 + slatDepth + 0.018
   );
   group.add(tv);
@@ -3828,7 +3829,7 @@ function setTvWallVariantFromLibrary(variantId) {
   setStatus(
     '木格柵電視牆 · ' +
     TV_WALL_VARIANTS[variantId].label +
-    ' · LG OLED77G6PTA'
+    ' · 75 吋電視'
   );
 }
 
@@ -5495,7 +5496,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-default-new-components-plan-center-v3'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tv-75inch-v4'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -5561,7 +5562,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA 已配置'
+      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + 75 吋電視 已配置'
     );
     fitCamera();
   } catch (error) {
