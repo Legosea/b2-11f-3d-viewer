@@ -4015,21 +4015,21 @@ function createHalfWallFrostedSafetyGlass() {
   });
 
   const glassMat = new THREE.MeshPhysicalMaterial({
-    // Flicker-free matte frosted safety glass.
-    // No alpha blending and no transmission: this avoids all transparent-sort
-    // artifacts on iPhone/Safari while preserving the real 8 mm geometry.
-    color: 0xe1e7e5,
-    transparent: false,
-    opacity: 1.0,
+    // Medium-translucent 8 mm frosted safety glass.
+    // Keep transmission disabled and render only the front faces to avoid the
+    // Safari/iPhone flicker seen with physically transmitted / double-sided glass.
+    color: 0xdce4e2,
+    transparent: true,
+    opacity: 0.62,
     transmission: 0,
     thickness: glassThickness,
-    roughness: 0.82,
+    roughness: 0.68,
     metalness: 0,
     ior: 1.52,
-    clearcoat: 0.06,
-    clearcoatRoughness: 0.68,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.62,
     side: THREE.FrontSide,
-    depthWrite: true,
+    depthWrite: false,
     depthTest: true
   });
 
@@ -4077,8 +4077,10 @@ function createHalfWallFrostedSafetyGlass() {
     0
   );
   glass.castShadow = false;
-  glass.receiveShadow = true;
-  glass.renderOrder = 0;
+  glass.receiveShadow = false;
+  // Draw after opaque room surfaces; depthWrite stays off to minimize
+  // transparent sorting artifacts while orbiting the camera.
+  glass.renderOrder = 2;
   glass.name = 'HalfWall_frosted_safety_glass_8mm';
   group.add(glass);
 
