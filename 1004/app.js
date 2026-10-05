@@ -83,6 +83,15 @@ const COMPONENT_LIBRARY = Object.freeze({
       widthMm: 2868,
       depthMm: 620,
       heightMm: 45
+    },
+    {
+      id: 'living-tv-slat-wall',
+      brand: 'Built-in',
+      model: '90s Acoustic Slat TV Wall',
+      label: '客廳木格柵電視牆 + LG OLED77G6PTA',
+      tvModel: 'LG OLED77G6PTA',
+      tvSizeMm: [1712, 982, 24.8],
+      variants: ['light-oak','walnut','caramel-walnut','shadow-black']
     }
   ]
 });
@@ -198,6 +207,42 @@ const DAYBED_DEFAULT_STATE = Object.freeze({
   z: -0.945,
   rotationY: 0,
   lidsOpen: false
+});
+
+const TV_WALL_STORAGE_KEY = 'b2-11f-1004.living-tv-slat-wall.v1';
+
+const TV_WALL_VARIANTS = Object.freeze({
+  'light-oak': {
+    label: '淺橡木',
+    color: 0xe1c89d,
+    texture: 'light-oak'
+  },
+  'walnut': {
+    label: '胡桃棕',
+    color: 0x8a715a,
+    texture: 'walnut'
+  },
+  'caramel-walnut': {
+    label: '焦糖胡桃棕',
+    color: 0xa87743,
+    texture: 'natural-wood'
+  },
+  'shadow-black': {
+    label: '曜影黑',
+    color: 0x343536,
+    texture: null
+  }
+});
+
+// Actual living-room TV wall is the x≈6.1346 m wall,
+// spanning z≈0 to -1.99 m. The front faces the living room (-X).
+const TV_WALL_DEFAULT_STATE = Object.freeze({
+  exists: true,
+  x: 6.125,
+  y: 0,
+  z: -0.995,
+  rotationY: -Math.PI / 2,
+  variant: 'light-oak'
 });
 
 const CENTRO_VARIANTS = Object.freeze({
@@ -318,6 +363,8 @@ const addSofaBtn = document.getElementById('addSofaBtn');
 const sofaWidthButtons = [...document.querySelectorAll('[data-sofa-width]')];
 const addDaybedBtn = document.getElementById('addDaybedBtn');
 const daybedLidToggleBtn = document.getElementById('daybedLidToggleBtn');
+const addTvWallBtn = document.getElementById('addTvWallBtn');
+const tvWallVariantButtons = [...document.querySelectorAll('[data-tvwall-variant]')];
 
 let scene, camera, renderer, controls, modelRoot, stagingRoot, sunLight, interiorLightRoot, editableRoot, transformControls;
 let nordicWoodTexture = null;
@@ -688,6 +735,30 @@ function bindUI() {
         ? 'W3 臥榻 · 三片上掀已開啟，可查看收納空間'
         : 'W3 臥榻 · 三片上蓋已關閉'
     );
+  });
+
+  tvWallVariantButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setTvWallVariantFromLibrary(button.dataset.tvwallVariant);
+    });
+  });
+
+  addTvWallBtn?.addEventListener('click', () => {
+    const existing = getCurrentTvWall();
+    if (existing) {
+      selectEditable(existing);
+      setStatus('木格柵電視牆 + LG OLED77G6PTA 已存在 · 已選取');
+      return;
+    }
+
+    const saved = readTvWallState();
+    const state = saved ? { ...saved, exists: true } : TV_WALL_DEFAULT_STATE;
+    const tvWall = createLivingTvWall();
+    applyTvWallState(tvWall, state);
+    editableRoot.add(tvWall);
+    saveTvWallState(tvWall);
+    selectEditable(tvWall);
+    syncLibraryUI();
   });
 
   materialPresetButtons.forEach(button => {
@@ -1339,6 +1410,20 @@ function syncLibraryUI() {
       ? '關閉三片上蓋'
       : '上掀展示';
   }
+
+  const tvWall = getCurrentTvWall();
+  const savedTvWall = readTvWallState();
+  const tvWallVariant =
+    tvWall?.userData?.variant ||
+    savedTvWall?.variant ||
+    TV_WALL_DEFAULT_STATE.variant;
+
+  tvWallVariantButtons.forEach(button => {
+    button.classList.toggle(
+      'selected',
+      button.dataset.tvwallVariant === tvWallVariant
+    );
+  });
 
   const materialState = readMaterialState();
   materialPresetButtons.forEach(button => {
@@ -2064,7 +2149,108 @@ function saveEditableState(object) {
     return saveDaybedState(object);
   }
 
+  if (object.userData?.componentId === 'living-tv-slat-wall') {
+    return saveTvWallState(object);
+  }
+
   return false;
+}
+
+function readTvWallState() {
+  try {
+    const raw = localStorage.getItem(TV_WALL_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      exists: parsed.exists !== false,
+      x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : TV_WALL_DEFAULT_STATE.x,
+      y: 0,
+      z: Number.isFinite(Number(parsed.z)) ? Number(parsed.z) : TV_WALL_DEFAULT_STATE.z,
+      rotationY: Number.isFinite(Number(parsed.rotationY))
+        ? Number(parsed.rotationY)
+        : TV_WALL_DEFAULT_STATE.rotationY,
+      variant: TV_WALL_VARIANTS[parsed.variant]
+        ? parsed.variant
+        : TV_WALL_DEFAULT_STATE.variant
+    };
+  } catch (error) {
+    console.warn('Unable to read TV wall state.', error);
+    return null;
+  }
+}
+
+function writeTvWallState(state) {
+  try {
+    localStorage.setItem(TV_WALL_STORAGE_KEY, JSON.stringify({
+      exists: state.exists !== false,
+      x: Number(state.x),
+      y: 0,
+      z: Number(state.z),
+      rotationY: Number(state.rotationY),
+      variant: TV_WALL_VARIANTS[state.variant]
+        ? state.variant
+        : TV_WALL_DEFAULT_STATE.variant
+    }));
+    return true;
+  } catch (error) {
+    console.warn('Unable to persist TV wall state.', error);
+    return false;
+  }
+}
+
+function saveTvWallState(tvWall) {
+  if (!tvWall) return false;
+
+  const saved = writeTvWallState({
+    exists: true,
+    x: tvWall.position.x,
+    y: 0,
+    z: tvWall.position.z,
+    rotationY: tvWall.rotation.y,
+    variant: tvWall.userData.variant || TV_WALL_DEFAULT_STATE.variant
+  });
+
+  if (saved) tvWall.userData.hasSavedPlacement = true;
+  return saved;
+}
+
+function saveTvWallDeletedState() {
+  const current = readTvWallState() || TV_WALL_DEFAULT_STATE;
+  return writeTvWallState({ ...current, exists: false });
+}
+
+function getCurrentTvWall() {
+  return editableRoot?.children.find(
+    child => child.userData?.componentId === 'living-tv-slat-wall'
+  ) || null;
+}
+
+function applyTvWallState(tvWall, state) {
+  const next = state || TV_WALL_DEFAULT_STATE;
+  tvWall.position.set(next.x, 0, next.z);
+  tvWall.rotation.set(0, next.rotationY, 0);
+  tvWall.userData.floorY = 0;
+  tvWall.userData.hasSavedPlacement = Boolean(state);
+  applyTvWallVariant(
+    tvWall,
+    TV_WALL_VARIANTS[next.variant] ? next.variant : TV_WALL_DEFAULT_STATE.variant,
+    false
+  );
+}
+
+function restoreOrCreateTvWall() {
+  const saved = readTvWallState();
+  if (saved?.exists === false) return null;
+
+  const tvWall = createLivingTvWall();
+  applyTvWallState(tvWall, saved || TV_WALL_DEFAULT_STATE);
+  editableRoot.add(tvWall);
+
+  if (!saved) saveTvWallState(tvWall);
+  return tvWall;
 }
 
 function readDaybedState() {
@@ -3263,6 +3449,212 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
+function createLgOled77G6Pta() {
+  // LG official dimensions without stand: 1712 x 982 x 24.8 mm.
+  const width = 1.712;
+  const height = 0.982;
+  const depth = 0.0248;
+
+  const group = new THREE.Group();
+  group.name = 'LG_OLED77G6PTA';
+  group.userData.label = 'LG OLED77G6PTA';
+
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: 0x101112,
+    metalness: 0.16,
+    roughness: 0.24,
+    clearcoat: 0.32,
+    clearcoatRoughness: 0.10
+  });
+
+  const screenMat = new THREE.MeshPhysicalMaterial({
+    color: 0x090b0d,
+    metalness: 0.02,
+    roughness: 0.045,
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.035
+  });
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    bodyMat
+  );
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  // Near edge-to-edge OLED screen.
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(width - 0.014, height - 0.014, 0.004),
+    screenMat
+  );
+  screen.position.z = depth / 2 + 0.0025;
+  screen.castShadow = false;
+  screen.receiveShadow = true;
+  group.add(screen);
+
+  // Very thin wall mount plate; hidden from normal front view.
+  const mount = new THREE.Mesh(
+    new THREE.BoxGeometry(0.30, 0.30, 0.010),
+    new THREE.MeshStandardMaterial({
+      color: 0x2b2d2f,
+      metalness: 0.52,
+      roughness: 0.42
+    })
+  );
+  mount.position.z = -depth / 2 - 0.004;
+  group.add(mount);
+
+  return group;
+}
+
+function createLivingTvWall() {
+  // Actual wall plane: x≈6.1346 m, z≈0 to -1.99 m.
+  // Panel covers nearly the full clear wall width while leaving a discreet
+  // architectural reveal at both vertical edges.
+  const wallWidth = 1.95;
+  const wallHeight = 2.48;
+  const backerDepth = 0.018;
+  const slatWidth = 0.030;
+  const slatGap = 0.014;
+  const slatDepth = 0.035;
+
+  const group = new THREE.Group();
+  group.name = 'Living_TV_Slat_Wall_LG_OLED77G6PTA';
+  group.userData.editable = true;
+  group.userData.componentId = 'living-tv-slat-wall';
+  group.userData.label = '木格柵電視牆 + LG OLED77G6PTA';
+  group.userData.floorY = 0;
+  group.userData.snapAngleOffset = 0;
+  // It is intentionally wall-mounted, so shrink the generic wall-collision
+  // envelope enough to allow the panel to sit flush against the wall plane.
+  group.userData.wallClearance = -0.060;
+  group.userData.variant = TV_WALL_DEFAULT_STATE.variant;
+  group.userData.productSize = {
+    wallWidth,
+    wallHeight,
+    tvWidth: 1.712,
+    tvHeight: 0.982,
+    tvDepth: 0.0248
+  };
+
+  const backerMat = new THREE.MeshStandardMaterial({
+    color: 0x242321,
+    roughness: 0.94,
+    metalness: 0
+  });
+
+  const slatMat = new THREE.MeshStandardMaterial({
+    color: TV_WALL_VARIANTS['light-oak'].color,
+    roughness: 0.72,
+    metalness: 0.01,
+    map: getWoodTexture('light-oak', 'roomDoor')
+  });
+
+  const backer = new THREE.Mesh(
+    new THREE.BoxGeometry(wallWidth, wallHeight, backerDepth),
+    backerMat
+  );
+  backer.position.set(0, wallHeight / 2, 0);
+  backer.castShadow = true;
+  backer.receiveShadow = true;
+  backer.name = 'TVWall_acoustic_backer';
+  group.add(backer);
+
+  const step = slatWidth + slatGap;
+  const slatCount = Math.floor((wallWidth + slatGap) / step);
+  const usedWidth = slatCount * slatWidth + (slatCount - 1) * slatGap;
+  const startX = -usedWidth / 2 + slatWidth / 2;
+  const slatGeo = new THREE.BoxGeometry(slatWidth, wallHeight, slatDepth);
+
+  for (let i = 0; i < slatCount; i++) {
+    const slat = new THREE.Mesh(slatGeo, slatMat);
+    slat.position.set(
+      startX + i * step,
+      wallHeight / 2,
+      backerDepth / 2 + slatDepth / 2
+    );
+    slat.castShadow = true;
+    slat.receiveShadow = true;
+    slat.name = 'TVWall_slat_' + i;
+    group.add(slat);
+  }
+
+  // LG G6 Gallery Series: zero-gap visual treatment, centered on wall.
+  const tv = createLgOled77G6Pta();
+  tv.position.set(
+    0,
+    1.28,
+    backerDepth / 2 + slatDepth + 0.018
+  );
+  group.add(tv);
+
+  group._slatMaterial = slatMat;
+  group._tv = tv;
+
+  const pickProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(wallWidth, wallHeight, 0.22),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  pickProxy.position.set(0, wallHeight / 2, 0.06);
+  pickProxy.userData.pickProxy = true;
+  group.add(pickProxy);
+
+  applyTvWallVariant(group, TV_WALL_DEFAULT_STATE.variant, false);
+  return group;
+}
+
+function applyTvWallVariant(tvWall, variantId, save = true) {
+  const variant = TV_WALL_VARIANTS[variantId];
+  if (!tvWall || !variant) return false;
+
+  tvWall.userData.variant = variantId;
+
+  const material = tvWall._slatMaterial;
+  if (material) {
+    material.color.setHex(variant.color);
+    material.map = variant.texture
+      ? getWoodTexture(variant.texture, 'roomDoor')
+      : null;
+    material.roughness = variantId === 'shadow-black' ? 0.78 : 0.72;
+    material.needsUpdate = true;
+  }
+
+  if (save) saveTvWallState(tvWall);
+  syncLibraryUI();
+  return true;
+}
+
+function setTvWallVariantFromLibrary(variantId) {
+  if (!TV_WALL_VARIANTS[variantId]) return;
+
+  let tvWall = getCurrentTvWall();
+
+  if (!tvWall) {
+    const saved = readTvWallState();
+    const state = {
+      ...(saved || TV_WALL_DEFAULT_STATE),
+      exists: true,
+      variant: variantId
+    };
+    tvWall = createLivingTvWall();
+    applyTvWallState(tvWall, state);
+    editableRoot.add(tvWall);
+  }
+
+  applyTvWallVariant(tvWall, variantId, true);
+  selectEditable(tvWall);
+  setStatus(
+    '木格柵電視牆 · ' +
+    TV_WALL_VARIANTS[variantId].label +
+    ' · LG OLED77G6PTA'
+  );
+}
+
 function createW3WindowDaybed() {
   // Actual W3 niche side-wall faces measured from the GLB:
   // left interior face  x ~= 3.1195 m
@@ -4285,6 +4677,8 @@ function deleteSelectedEditable() {
     saveSofaDeletedState();
   } else if (componentId === 'w3-window-daybed') {
     saveDaybedDeletedState();
+  } else if (componentId === 'living-tv-slat-wall') {
+    saveTvWallDeletedState();
   }
 
   objectToolbar?.classList.add('hidden');
@@ -4911,7 +5305,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-w3-daybed-true-wall-span-v5'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-tvwall-lg-oled77g6pta-v1'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -4965,6 +5359,7 @@ async function tryAutoLoadRepoModel() {
     const washer = restoreOrCreateWasher();
     const sofa = restoreOrCreateSofa();
     const daybed = restoreOrCreateDaybed();
+    const tvWall = restoreOrCreateTvWall();
     syncLibraryUI();
 
     welcome.classList.add('hidden');
@@ -4976,7 +5371,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + NR-F601WX + Reims 沙發 + W3 窗邊臥榻已配置'
+      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA 已配置'
     );
     fitCamera();
   } catch (error) {
