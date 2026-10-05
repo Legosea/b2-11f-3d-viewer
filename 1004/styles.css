@@ -348,3 +348,29 @@ button,input{font:inherit}
   font-size:9px;
   font-weight:700
 }
+
+.halfwall-icon{
+  position:relative;
+  width:58px;height:48px;
+  overflow:hidden;
+  border-radius:4px;
+  background:#eeeae3
+}
+.halfwall-icon:before{
+  content:"";position:absolute;
+  left:5px;right:5px;bottom:5px;height:18px;
+  background:#f2f0eb;
+  border:1px solid #d7d3cc;
+  box-shadow:0 -4px 0 #d3b688
+}
+.halfwall-icon:after{
+  content:"";position:absolute;
+  left:8px;right:8px;top:5px;height:20px;
+  border:1px solid #aaa;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(210,220,220,.72) 0 3px,
+      rgba(250,255,255,.44) 3px 6px
+    )
+}
