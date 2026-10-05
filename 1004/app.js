@@ -31,6 +31,15 @@ const ROOM_ANGLE_RELEASE_THRESHOLD = THREE.MathUtils.degToRad(15);
 
 const MATERIAL_STORAGE_KEY = 'b2-11f-1004.material-library.v1';
 
+const GITHUB_LAYOUT = Object.freeze({
+  owner: 'Legosea',
+  repo: 'b2-11f-3d-viewer',
+  branch: 'main',
+  path: '1004/layout.json',
+  rawUrl: 'https://raw.githubusercontent.com/Legosea/b2-11f-3d-viewer/main/1004/layout.json'
+});
+const GITHUB_TOKEN_SESSION_KEY = 'b2-11f-1004.github-write-token';
+
 const COMPONENT_LIBRARY = Object.freeze({
   appliances: [
     {
@@ -366,6 +375,7 @@ const moveObjectBtn = document.getElementById('moveObjectBtn');
 const rotateObjectBtn = document.getElementById('rotateObjectBtn');
 const deleteObjectBtn = document.getElementById('deleteObjectBtn');
 const libraryBtn = document.getElementById('libraryBtn');
+const saveGithubBtn = document.getElementById('saveGithubBtn');
 const topViewBtn = document.getElementById('topViewBtn');
 const frontViewBtn = document.getElementById('frontViewBtn');
 const sideViewBtn = document.getElementById('sideViewBtn');
@@ -423,7 +433,210 @@ const collisionSize = new THREE.Vector3();
 
 initThree();
 bindUI();
-tryAutoLoadRepoModel();
+bootstrapViewer();
+
+async function bootstrapViewer() {
+  await loadGithubLayoutSnapshot();
+  await tryAutoLoadRepoModel();
+}
+
+function getGithubLayoutStorageKeys() {
+  return [
+    WASHER_STORAGE_KEY,
+    FRIDGE_STORAGE_KEY,
+    KITCHEN_STORAGE_KEY,
+    SOFA_STORAGE_KEY,
+    DAYBED_STORAGE_KEY,
+    TV_WALL_STORAGE_KEY,
+    HALF_WALL_STORAGE_KEY,
+    MATERIAL_STORAGE_KEY
+  ];
+}
+
+function flushEditableStatesForGithub() {
+  editableRoot?.children?.forEach(object => {
+    saveEditableState(object);
+  });
+}
+
+function collectGithubLayoutSnapshot() {
+  flushEditableStatesForGithub();
+
+  const states = {};
+  getGithubLayoutStorageKeys().forEach(key => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    try {
+      states[key] = JSON.parse(raw);
+    } catch {
+      // Ignore a corrupted local entry instead of breaking the entire save.
+    }
+  });
+
+  return {
+    schemaVersion: 1,
+    saved: true,
+    savedAt: new Date().toISOString(),
+    states
+  };
+}
+
+function applyGithubLayoutSnapshot(snapshot) {
+  if (!snapshot?.saved || !snapshot.states || typeof snapshot.states !== 'object') {
+    return false;
+  }
+
+  const allowed = new Set(getGithubLayoutStorageKeys());
+
+  Object.entries(snapshot.states).forEach(([key, value]) => {
+    if (!allowed.has(key) || value == null) return;
+    localStorage.setItem(key, JSON.stringify(value));
+  });
+
+  return true;
+}
+
+async function loadGithubLayoutSnapshot() {
+  try {
+    const response = await fetch(
+      GITHUB_LAYOUT.rawUrl + '?v=' + Date.now(),
+      { cache: 'no-store' }
+    );
+
+    if (!response.ok) return false;
+
+    const snapshot = await response.json();
+    const applied = applyGithubLayoutSnapshot(snapshot);
+
+    if (applied) {
+      setStatus('已從 GitHub 同步元件配置');
+    }
+
+    return applied;
+  } catch (error) {
+    console.warn('GitHub layout sync failed; using local state.', error);
+    return false;
+  }
+}
+
+function utf8ToBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function getGithubLayoutApiUrl() {
+  const path = GITHUB_LAYOUT.path
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/');
+
+  return (
+    'https://api.github.com/repos/' +
+    encodeURIComponent(GITHUB_LAYOUT.owner) + '/' +
+    encodeURIComponent(GITHUB_LAYOUT.repo) +
+    '/contents/' + path
+  );
+}
+
+function getGithubWriteToken() {
+  let token = sessionStorage.getItem(GITHUB_TOKEN_SESSION_KEY);
+
+  if (!token) {
+    token = window.prompt(
+      '第一次儲存到 GitHub 需要 Fine-grained Personal Access Token。\n' +
+      '請只授權 Legosea/b2-11f-3d-viewer，Contents: Read and write。\n' +
+      'Token 只暫存在這個瀏覽器分頁的 sessionStorage，不會寫進專案或 localStorage。'
+    )?.trim();
+
+    if (token) {
+      sessionStorage.setItem(GITHUB_TOKEN_SESSION_KEY, token);
+    }
+  }
+
+  return token || null;
+}
+
+async function saveLayoutToGitHub() {
+  if (!saveGithubBtn) return;
+
+  const oldText = saveGithubBtn.textContent;
+  saveGithubBtn.disabled = true;
+  saveGithubBtn.textContent = '儲存中…';
+
+  try {
+    const token = getGithubWriteToken();
+
+    if (!token) {
+      setStatus('已取消 GitHub 儲存');
+      return;
+    }
+
+    const snapshot = collectGithubLayoutSnapshot();
+    const apiUrl = getGithubLayoutApiUrl();
+    const headers = {
+      Accept: 'application/vnd.github+json',
+      Authorization: 'Bearer ' + token,
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+
+    let sha = null;
+    const metaResponse = await fetch(
+      apiUrl + '?ref=' + encodeURIComponent(GITHUB_LAYOUT.branch) + '&v=' + Date.now(),
+      { headers, cache: 'no-store' }
+    );
+
+    if (metaResponse.ok) {
+      const meta = await metaResponse.json();
+      sha = meta.sha || null;
+    } else if (metaResponse.status !== 404) {
+      throw new Error('讀取 GitHub layout.json 失敗：HTTP ' + metaResponse.status);
+    }
+
+    const body = {
+      message: 'Save 1004 component layout',
+      content: utf8ToBase64(JSON.stringify(snapshot, null, 2)),
+      branch: GITHUB_LAYOUT.branch
+    };
+
+    if (sha) body.sha = sha;
+
+    const saveResponse = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (saveResponse.status === 401 || saveResponse.status === 403) {
+      sessionStorage.removeItem(GITHUB_TOKEN_SESSION_KEY);
+      throw new Error(
+        'GitHub Token 無效或沒有 Contents: Read and write 權限，請重新按「儲存元件」輸入。'
+      );
+    }
+
+    if (!saveResponse.ok) {
+      const detail = await saveResponse.text();
+      throw new Error(
+        'GitHub 儲存失敗：HTTP ' + saveResponse.status + ' ' + detail.slice(0, 180)
+      );
+    }
+
+    setStatus('元件位置 / 角度 / 配色已儲存到 GitHub · 跨瀏覽器同步');
+  } catch (error) {
+    console.error(error);
+    setStatus(error?.message || 'GitHub 儲存失敗');
+    alert(error?.message || 'GitHub 儲存失敗');
+  } finally {
+    saveGithubBtn.disabled = false;
+    saveGithubBtn.textContent = oldText;
+  }
+}
 
 function initThree() {
   scene = new THREE.Scene();
@@ -665,6 +878,7 @@ function bindUI() {
   deleteObjectBtn?.addEventListener('click', deleteSelectedEditable);
 
   libraryBtn?.addEventListener('click', () => setLibraryOpen(true));
+  saveGithubBtn?.addEventListener('click', saveLayoutToGitHub);
   closeLibraryBtn?.addEventListener('click', () => setLibraryOpen(false));
   libraryBackdrop?.addEventListener('click', () => setLibraryOpen(false));
 
@@ -3882,27 +4096,22 @@ function createHalfWallFrostedSafetyGlass() {
   });
 
   const glassMat = new THREE.MeshPhysicalMaterial({
-    // Stable photoreal frosted safety glass:
-    // use physically-based roughness/transmission instead of high-frequency bump,
-    // avoiding shimmer / sorting artifacts while orbiting the camera.
-    color: 0xf0f4f3,
-    transparent: true,
+    // Flicker-free matte frosted safety glass.
+    // No alpha blending and no transmission: this avoids all transparent-sort
+    // artifacts on iPhone/Safari while preserving the real 8 mm geometry.
+    color: 0xe1e7e5,
+    transparent: false,
     opacity: 1.0,
-    transmission: 0.52,
+    transmission: 0,
     thickness: glassThickness,
-    roughness: 0.72,
+    roughness: 0.82,
     metalness: 0,
     ior: 1.52,
-    attenuationColor: new THREE.Color(0xeaf1ef),
-    attenuationDistance: 0.80,
-    clearcoat: 0.04,
-    clearcoatRoughness: 0.55,
+    clearcoat: 0.06,
+    clearcoatRoughness: 0.68,
     side: THREE.FrontSide,
     depthWrite: true,
-    depthTest: true,
-    polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1
+    depthTest: true
   });
 
   const base = new THREE.Mesh(
@@ -3950,7 +4159,7 @@ function createHalfWallFrostedSafetyGlass() {
   );
   glass.castShadow = false;
   glass.receiveShadow = true;
-  glass.renderOrder = 3;
+  glass.renderOrder = 0;
   glass.name = 'HalfWall_frosted_safety_glass_8mm';
   group.add(glass);
 
@@ -5891,7 +6100,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-frosted-glass-stable-render-v9'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-matte-glass-github-layout-save-v10'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
@@ -5958,7 +6167,7 @@ async function tryAutoLoadRepoModel() {
       meshCount + ' meshes · ' +
       (glbBuffer.byteLength / 1048576).toFixed(2) + ' MB';
     setStatus(
-      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA + 半矮牆長虹玻璃 已配置'
+      '1004 · CENTRO + Reims + W3 臥榻 + 木格柵電視牆 + LG OLED77G6PTA + 半矮牆磨砂防爆玻璃 已配置'
     );
     fitCamera();
   } catch (error) {
