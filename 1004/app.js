@@ -3779,7 +3779,7 @@ function setKitchenCountertopFromLibrary(countertopId) {
   );
 }
 
-function getFrostedGlassMicroTexture() {
+function getFrostedGlassMicroTexture_DISABLED() {
   if (frostedGlassMicroTexture) return frostedGlassMicroTexture;
 
   const canvas = document.createElement('canvas');
@@ -3882,23 +3882,27 @@ function createHalfWallFrostedSafetyGlass() {
   });
 
   const glassMat = new THREE.MeshPhysicalMaterial({
-    // Neutral low-iron safety glass with a realistic frosted surface.
-    color: 0xeaf0ef,
+    // Stable photoreal frosted safety glass:
+    // use physically-based roughness/transmission instead of high-frequency bump,
+    // avoiding shimmer / sorting artifacts while orbiting the camera.
+    color: 0xf0f4f3,
     transparent: true,
-    opacity: 0.92,
-    transmission: 0.58,
+    opacity: 1.0,
+    transmission: 0.52,
     thickness: glassThickness,
-    roughness: 0.48,
+    roughness: 0.72,
     metalness: 0,
     ior: 1.52,
-    attenuationColor: new THREE.Color(0xe4efec),
-    attenuationDistance: 0.55,
-    clearcoat: 0.10,
-    clearcoatRoughness: 0.32,
-    side: THREE.DoubleSide,
-    bumpMap: getFrostedGlassMicroTexture(),
-    bumpScale: 0.0025,
-    depthWrite: false
+    attenuationColor: new THREE.Color(0xeaf1ef),
+    attenuationDistance: 0.80,
+    clearcoat: 0.04,
+    clearcoatRoughness: 0.55,
+    side: THREE.FrontSide,
+    depthWrite: true,
+    depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1
   });
 
   const base = new THREE.Mesh(
@@ -3987,7 +3991,9 @@ function createHalfWallFrostedSafetyGlass() {
     new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
-      depthWrite: false
+      colorWrite: false,
+      depthWrite: false,
+      depthTest: false
     })
   );
   pickProxy.position.y = totalHeight / 2;
@@ -5885,7 +5891,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-photoreal-material-pass-frosted8mm-v8'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-frosted-glass-stable-render-v9'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
