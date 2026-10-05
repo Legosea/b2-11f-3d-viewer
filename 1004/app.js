@@ -98,9 +98,9 @@ const COMPONENT_LIBRARY = Object.freeze({
       brand: 'Built-in',
       model: 'Half Wall + Fluted Glass',
       label: '半矮牆＋長虹玻璃',
-      sizeMm: [1550, 100, 1935],
-      lowerWallHeightMm: 920,
-      glassHeightMm: 980
+      sizeMm: [1550, 100, 2600],
+      lowerWallHeightMm: 1000,
+      glassHeightMm: 1565
     }
   ]
 });
@@ -3799,16 +3799,19 @@ function getFlutedGlassBumpTexture() {
 }
 
 function createHalfWallFlutedGlass() {
-  // Reference-inspired partition:
-  // 92 cm white half-wall + 3.5 cm timber cap + 98 cm fluted glass.
+  // Updated built-in partition:
+  // 100 cm white half-wall + 3.5 cm timber cap, with fluted glass continuing
+  // all the way to the apartment ceiling (2.60 m). The glass spans the full
+  // partition width with no left/right reveal.
   const length = 1.55;
   const depth = 0.10;
-  const lowerWallHeight = 0.92;
+  const lowerWallHeight = 1.00;
   const capThickness = 0.035;
   const capDepth = 0.17;
-  const glassHeight = 0.98;
+  const ceilingHeight = 2.60;
+  const glassHeight = ceilingHeight - lowerWallHeight - capThickness;
   const glassThickness = 0.018;
-  const totalHeight = lowerWallHeight + capThickness + glassHeight;
+  const totalHeight = ceilingHeight;
 
   const group = new THREE.Group();
   group.name = 'Living_HalfWall_FlutedGlass';
@@ -3823,7 +3826,8 @@ function createHalfWallFlutedGlass() {
     depth,
     lowerWallHeight,
     glassHeight,
-    totalHeight
+    totalHeight,
+    ceilingHeight
   };
 
   const wallMat = new THREE.MeshStandardMaterial({
@@ -3891,7 +3895,7 @@ function createHalfWallFlutedGlass() {
 
   const glass = new THREE.Mesh(
     new THREE.BoxGeometry(
-      length - 0.07,
+      length,
       glassHeight,
       glassThickness
     ),
@@ -3918,7 +3922,7 @@ function createHalfWallFlutedGlass() {
   [-1, 1].forEach((side, idx) => {
     const channel = new THREE.Mesh(sideChannelGeo, channelMat);
     channel.position.set(
-      side * (length - 0.07) / 2,
+      side * (length / 2 - 0.011),
       lowerWallHeight + capThickness + glassHeight / 2,
       0
     );
@@ -3928,7 +3932,7 @@ function createHalfWallFlutedGlass() {
   });
 
   const topChannel = new THREE.Mesh(
-    new THREE.BoxGeometry(length - 0.07, 0.022, 0.028),
+    new THREE.BoxGeometry(length, 0.022, 0.028),
     channelMat
   );
   topChannel.position.set(
@@ -5832,7 +5836,7 @@ async function tryAutoLoadRepoModel() {
 
     const partCount = 15;
     const partUrls = Array.from({ length: partCount }, (_, i) =>
-      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-fluted-glass-77tv-v5'
+      './model/part-' + String(i).padStart(2, '0') + '.txt?v=20261005-halfwall-100cm-glass-to-ceiling-v6'
     );
 
     const parts = await Promise.all(partUrls.map(async (url, i) => {
